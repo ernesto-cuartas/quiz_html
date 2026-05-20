@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Context Window Explorer — DLAI Context Engineering</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --coral: #FF5534; --coral-bg: #FFDFD9;
+  --amber: #FFB800; --amber-bg: #FFF2CF;
+  --blue: #327EFF; --blue-bg: #D8E7FF;
+  --green: #00855D; --green-bg: #CFE9E1;
+  --black: #0A0A0A; --g50: #FAFAFA; --g100: #F0F0F0;
+  --g150: #E8E8E8; --g200: #E0E0E0; --g600: #444; --white: #FFF;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100vh; overflow: hidden; font-family: 'Inter', sans-serif; background: var(--white); color: var(--black); }
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* ── Header ── */
+.header { padding: 20px 32px 0; }
+.header h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+.header .sub { font-size: 14px; color: var(--g600); margin-top: 2px; }
+
+/* ── Legend ── */
+.legend-row { display: flex; gap: 18px; padding: 12px 32px 0; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--g600); font-weight: 500; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ── Token bar ── */
+.token-section { padding: 14px 32px 0; display: flex; align-items: center; gap: 16px; }
+.token-bar { flex: 1; height: 10px; background: var(--g100); border-radius: 5px; overflow: hidden; border: 1px solid var(--g200); }
+.token-bar-fill { height: 100%; border-radius: 5px; transition: width 0.7s ease, background 0.5s ease; }
+.token-label { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap; }
+.token-label .big { font-size: 22px; font-weight: 700; }
+
+/* ── Main panels ── */
+.main { display: flex; flex: 1; overflow: hidden; min-height: 0; padding: 16px 32px; gap: 24px; }
+
+/* ── Timeline panel ── */
+.timeline-panel { width: 48%; display: flex; flex-direction: column; overflow: hidden; }
+.timeline-scroll { flex: 1; overflow-y: auto; }
+
+.phase-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--black); padding: 16px 0 6px; border-bottom: 1px solid var(--g200); margin-bottom: 4px;
+}
+
+.phase-label:first-child { padding-top: 4px; }
+
+.phase-divider {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 0; margin: 4px 0;
+}
+
+.phase-divider-line {
+  flex: 1; height: 0; border-top: 2px dashed var(--g200);
+}
+
+.phase-divider-text {
+  font-size: 13px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--coral); white-space: nowrap;
+  background: var(--coral-bg); padding: 4px 14px; border-radius: 20px;
+}
+
+.block-row {
+  display: flex; align-items: center; padding: 10px 12px; cursor: pointer;
+  border-radius: 10px; transition: background 0.15s; gap: 10px; margin: 2px 0;
+}
+
+.block-row:hover { background: var(--g50); }
+.block-row.selected { background: var(--blue-bg); }
+.block-row.hidden { display: none; }
+
+.block-dot {
+  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid;
+}
+
+.block-dot.prompt { background: var(--coral-bg); border-color: var(--coral); }
+.block-dot.tool { background: var(--amber-bg); border-color: var(--amber); }
+.block-dot.memory { background: var(--blue-bg); border-color: var(--blue); }
+.block-dot.state { background: var(--green-bg); border-color: var(--green); }
+.block-dot.reason { background: var(--g150); border-color: var(--black); }
+
+.block-label { flex: 1; font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.block-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+  flex-shrink: 0; white-space: nowrap; letter-spacing: 0.5px;
+}
+
+.badge-prompt { background: var(--coral-bg); color: var(--coral); }
+.badge-tool { background: var(--amber-bg); color: var(--amber); }
+.badge-memory { background: var(--blue-bg); color: var(--blue); }
+.badge-state { background: var(--green-bg); color: var(--green); }
+.badge-reason { background: var(--g150); color: var(--black); }
+
+.block-tokens {
+  font-family: 'JetBrains Mono', monospace; font-size: 14px;
+  color: var(--g600); flex-shrink: 0; font-weight: 500;
+}
+
+/* ── Controls ── */
+.controls { display: flex; gap: 10px; padding: 12px 0 0; }
+.btn {
+  padding: 10px 24px; font-size: 15px; font-weight: 700; border-radius: 10px;
+  border: none; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif;
+}
+
+.btn-next { background: var(--coral); color: var(--white); flex: 1; }
+.btn-next:hover { background: #E04428; }
+.btn-next:disabled { background: var(--g200); color: var(--g600); cursor: default; }
+.btn-reset { background: var(--g50); color: var(--g600); border: 1.5px solid var(--g200); }
+.btn-reset:hover { color: var(--black); border-color: var(--g600); }
+.btn-all { background: var(--white); color: var(--g600); border: 1.5px solid var(--g200); }
+.btn-all:hover { color: var(--black); border-color: var(--g600); }
+.step-count { font-size: 13px; color: var(--g600); text-align: center; padding-top: 6px; }
+
+/* ── Detail panel ── */
+.detail-panel { width: 52%; display: flex; flex-direction: column; overflow: hidden; }
+
+.detail-title {
+  font-size: 20px; font-weight: 700; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.detail-cat {
+  font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.cat-prompt { background: var(--coral-bg); color: var(--coral); }
+.cat-tool { background: var(--amber-bg); color: var(--amber); }
+.cat-memory { background: var(--blue-bg); color: var(--blue); }
+.cat-state { background: var(--green-bg); color: var(--green); }
+.cat-reason { background: var(--g150); color: var(--black); }
+
+.detail-content {
+  font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.75;
+  background: var(--g50); border: 1px solid var(--g200); border-radius: 12px;
+  padding: 18px 20px; white-space: pre-wrap; flex: 1; overflow-y: auto; margin-top: 10px;
+}
+
+.detail-concept {
+  font-size: 14px; line-height: 1.6; padding: 12px 16px; border-radius: 10px;
+  background: var(--blue-bg); margin-top: 10px;
+}
+
+.detail-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex: 1; text-align: center; color: var(--g600); gap: 8px;
+}
+
+.detail-empty .arrow { font-size: 28px; }
+.detail-empty p { font-size: 16px; max-width: 280px; line-height: 1.5; }
+.detail-empty .hint { font-size: 13px; }
+
+/* ── Sticky callout ── */
+.callout {
+  border-top: 1px solid var(--g200); padding: 14px 32px;
+  background: var(--white); display: flex; align-items: center; gap: 12px;
+  min-height: 52px;
+}
+
+.callout-tag {
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--coral); background: var(--coral-bg); padding: 4px 12px;
+  border-radius: 8px; flex-shrink: 0;
+}
+
+.callout-text {
+  font-size: 15px; line-height: 1.5; font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .main { flex-direction: column; padding: 12px 16px; gap: 12px; }
+  .timeline-panel, .detail-panel { width: 100%; }
+  .timeline-panel { max-height: 45vh; }
+  .header { padding: 16px 16px 0; }
+  .legend-row { padding: 8px 16px 0; }
+  .token-section { padding: 10px 16px 0; }
+  .callout { padding: 12px 16px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="header">
+    <h1>Context Window Explorer</h1>
+    <div class="sub">DeepLearning.AI — Context Engineering with Chroma</div>
+  </header>
+
+  <div class="legend-row">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--coral)"></div>Prompts</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Tools</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Memory</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>State</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--black)"></div>Reasoning</div>
+  </div>
+
+  <div class="token-section">
+    <div class="token-bar"><div class="token-bar-fill" id="tokenBar"></div></div>
+    <div class="token-label"><span class="big" id="tokenTotal">0</span> / <span id="tokenLimit">128K</span> tokens</div>
+  </div>
+
+  <div class="main">
+    <div class="timeline-panel">
+      <div class="timeline-scroll" id="timelinePanel"></div>
+      <div class="controls">
+        <button class="btn btn-reset" onclick="resetSteps()">Reset</button>
+        <button class="btn btn-next" id="btnNext" onclick="nextStep()">Start</button>
+        <button class="btn btn-all" onclick="showAll()">Show All</button>
+      </div>
+      <div class="step-count" id="stepCount"></div>
+    </div>
+    <div class="detail-panel" id="detailPanel"></div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-tag">Insight</div>
+    <div class="callout-text" id="calloutText">Press Start to see what loads into an agent's context window.</div>
+  </div>
+</div>
+
+<script>
+var SCENARIO = {
+  limit: 128000,
+  callouts: [
+    "Press Start to see what loads into an agent’s context window.",
+    "The system prompt defines who the agent is — before any fan sends a message.",
+    "Tool descriptions tell the model what it can do. Each tool costs tokens.",
+    "Three tools described: 310 tokens spent and no one has typed anything yet.",
+    "Memory from past sessions loads automatically. The agent already knows this fan.",
+    "1,790 tokens used and the customer hasn’t said a word yet.",
+    "Now the fan types. Everything above was already loaded and waiting.",
+    "The model thinks before acting. You don’t see this — but it costs tokens.",
+    "The agent chose one targeted search — refund + PayPal + Taylor Swift.",
+    "One result. The right one. Good retrieval is surgical.",
+    "2,650 tokens for one turn. The fan’s message was 48 of them."
+  ],
+  blocks: [
+    {
+      phase: "Before you type",
+      cat: "prompt", badge: "PROMPT", label: "System Prompt", tokens: 920,
+      content: "You are a support agent for StagePass, a\npremium concert ticket platform.\n\nYou help fans with ticket purchases, transfers,\nrefunds, and venue questions.\n\nRules:\n  - Always cite the specific policy you reference\n  - Never guess about seat availability\n  - Escalate to a human if:\n      * Refund is over $1,000\n      * Customer reports fraud\n      * You are unsure after two tool calls\n  - Be warm but concise. Fans are excited\n    and anxious about their tickets.",
+      concept: "The system prompt defines who the agent is. It loads first, before anything else — personality, rules, guardrails, and escalation paths. This is the most important context in the window."
+    },
+    {
+      cat: "tool", badge: "TOOL", label: "Tool: search_policies(query)", tokens: 125,
+      content: "search_policies(query: string) -> list[Policy]\n\n\"Search StagePass policies, FAQs, and venue\nguidelines. Returns up to 5 results ranked\nby relevance.\n\nUse when the customer asks about refunds,\ntransfer rules, entry requirements, or\ngeneral event policies.\nPrefer specific queries over broad ones.\"",
+      concept: "Tool descriptions are instructions the model reads to decide what it can do. The contract tells it when and how to use each tool."
+    },
+    {
+      cat: "tool", badge: "TOOL", label: "Tool: lookup_order(id)", tokens: 95,
+      content: "lookup_order(order_id: string) -> Order\n\n\"Look up a ticket order by ID. Returns seat\ninfo, purchase date, transfer history, and\nentry status.\n\nUse when the customer asks about a specific\norder or needs their ticket details.\"",
+      concept: "Each tool costs tokens just to describe. More tools means less room for actual work."
+    },
+    {
+      cat: "tool", badge: "TOOL", label: "Tool: check_availability(event, section)", tokens: 90,
+      content: "check_availability(\n  event_id: string,\n  section: string | null\n) -> Availability\n\n\"Check remaining ticket availability for an\nevent, optionally filtered by section.\n\nUse when a customer wants to buy tickets\nor upgrade their seats.\"",
+      concept: "Three tools described: 310 tokens before anyone speaks. Each one competes for space with the actual conversation."
+    },
+    {
+      cat: "memory", badge: "MEMORY", label: "Memory: Fan Profile", tokens: 380,
+      content: "Customer: Lucas Herrera\nEmail: lucas.h@email.com\nAccount: SP-77203\nMembership: StagePass Gold\n\nPurchase history:\n  - Summer Fest, MetLife Stadium (2024-08)\n    Section 112, Row 14, Seats 5-6\n    Paid: $892 via PayPal (2 tickets)\n  - Acoustic Sessions Live (2024-11)\n    GA Floor, $245 via PayPal\n  - Taylor Swift | Eras Tour (2025-02)\n    VIP Package, $1,200 via PayPal\n\nPreferences:\n  - Preferred venue: MetLife Stadium, NYC\n  - Payment: PayPal (lucas.h@email.com)\n  - Notifications: SMS + email\n  - Past issues: 1 (resolved, seat upgrade)\n\nNotes: Loyal fan, 3 events in 8 months.\n       Always buys pairs. VIP-curious.",
+      concept: "Long-term memory loads automatically from past sessions. The agent already knows Lucas — his purchase history, preferences, and that he always buys pairs."
+    },
+    {
+      cat: "state", badge: "STATE", label: "State: Session Context", tokens: 180,
+      content: "Session ID: sess_e7f41a\nRouted from: Gold Member Queue\nPriority: High (Gold tier)\nAgent assignment: auto\nTimestamp: 2025-06-15T10:07:00Z\nChannel: mobile app\nDevice: iPhone 15\nPage: order SP-TIX-98234\nEvent context: Taylor Swift | Eras Tour\n  NYC Stop | Aug 15, 2025\n  MetLife Stadium, New York City",
+      concept: "Short-term state tracks this conversation. Routing info, device, and which order page Lucas was looking at when he tapped ‘Help’."
+    },
+    {
+      divider: true
+    },
+    {
+      phase: "After you type",
+      cat: "prompt", badge: "PROMPT", label: "Fan Message", tokens: 48,
+      content: "Hey! I bought 2 tickets for the Taylor Swift\nshow at MetLife on Aug 15 but something came up\nand I can’t go anymore. Can I get a refund?\nI paid with PayPal. Order is SP-TIX-98234.",
+      concept: "The fan’s actual message — 48 tokens out of 1,790 already used. Everything above was loaded before Lucas typed a single word."
+    },
+    {
+      cat: "reason", badge: "REASON", label: "Reasoning Trace", tokens: 290,
+      content: "Let me think through this:\n\n1. Lucas wants a refund for 2 tickets\n2. Event: Taylor Swift | Eras Tour, MetLife, Aug 15\n3. Order: SP-TIX-98234\n4. Payment: PayPal\n\nFrom memory, I know he’s a Gold member.\nRefund eligibility depends on timing and\npayment method.\n\nI should search policies for refund rules.\nThe event is ~2 months away, so he should be\nwithin the refund window, but let me check.\n\nAction: search_policies for refund policy.",
+      concept: "The model thinks before acting. You don’t see this reasoning in the final response — but it costs 290 tokens. This is where the agent plans its approach."
+    },
+    {
+      cat: "tool", badge: "TOOL", label: "Tool Call: search_policies(\"ticket refund\")", tokens: 35,
+      content: "Agent calls:\n  search_policies(\"ticket refund\n    PayPal Taylor Swift\")\n\nTargeted query combining the action (refund)\nwith the payment method and event. Not a\nbroad search — scoped to this scenario.",
+      concept: "The agent chose what to search based on its reasoning. One targeted query — not a broad keyword dump."
+    },
+    {
+      cat: "tool", badge: "TOOL", label: "Tool Output: Refund Policy #R-105", tokens: 390,
+      content: "Ticket Refund Policy — All Events\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nRefund requests must be submitted at least\n30 days before the event date.\n\nAll payment methods are eligible, including\nPayPal, credit card, and Apple Pay. Refunds\nare returned to the original payment method\nwithin 5-7 business days.\n\nGold members receive priority processing\n(2-3 business days).\n\nTo initiate: Order page > \"Request Refund\"\nbutton > Select reason > Confirm.\n\nNote: VIP packages and day-of purchases\nare non-refundable.",
+      concept: "One result. The right one. Signal-to-noise is perfect. The agent has exactly what it needs — refund window, PayPal eligibility, and Gold member perks."
+    },
+    {
+      cat: "reason", badge: "REASON", label: "Agent Response", tokens: 222,
+      content: "Hey Lucas! Good news — you’re fully eligible\nfor a refund. Here’s why:\n\nYour show is Aug 15, so you’re well within\nthe 30-day refund window. And PayPal purchases\nare fully refundable.\n\nAs a Gold member, you’ll get priority\nprocessing (2-3 business days back to PayPal).\n\nHere’s how:\n1. Open your order (SP-TIX-98234)\n2. Tap \"Request Refund\"\n3. Select your reason and confirm\n4. Refund hits your PayPal in 2-3 days\n\nBoth tickets will be refunded together.\n(Policy #R-105)\n\nAnything else I can help with?",
+      concept: "2,650 tokens for one turn. The fan’s message was 48 of them. Everything else — system prompt, tools, memory, state, reasoning, retrieval — was the harness doing its job."
+    }
+  ]
+};
+
+var selectedIdx = -1;
+var revealedCount = 0;
+
+function nextStep() {
+  var blocks = getVisibleBlocks();
+  if (revealedCount >= blocks.length) return;
+  revealedCount++;
+  selectedIdx = revealedCount - 1;
+  render();
+  var rows = document.querySelectorAll('.block-row:not(.hidden)');
+  if (rows.length) rows[rows.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function resetSteps() {
+  revealedCount = 0;
+  selectedIdx = -1;
+  render();
+}
+
+function showAll() {
+  var blocks = getVisibleBlocks();
+  revealedCount = blocks.length;
+  selectedIdx = blocks.length - 1;
+  render();
+}
+
+function getVisibleBlocks() {
+  return SCENARIO.blocks.filter(function(b) { return !b.divider; });
+}
+
+function render() {
+  var blocks = SCENARIO.blocks;
+  var visibleBlocks = getVisibleBlocks();
+  var total = 0;
+  var visibleIdx = 0;
+
+  for (var i = 0; i < blocks.length; i++) {
+    if (!blocks[i].divider && visibleIdx < revealedCount) {
+      total += blocks[i].tokens;
+      visibleIdx++;
+    }
+  }
+
+  // Token bar
+  var pct = (total / SCENARIO.limit) * 100;
+  var bar = document.getElementById('tokenBar');
+  bar.style.width = Math.min(pct, 100) + '%';
+  bar.style.background = pct < 2 ? 'var(--green)' : pct < 5 ? 'var(--amber)' : 'var(--coral)';
+  document.getElementById('tokenTotal').textContent = total.toLocaleString();
+
+  // Timeline
+  var panel = document.getElementById('timelinePanel');
+  while (panel.firstChild) panel.removeChild(panel.firstChild);
+
+  visibleIdx = 0;
+  for (var i = 0; i < blocks.length; i++) {
+    var b = blocks[i];
+
+    if (b.divider) {
+      var divEl = document.createElement('div');
+      divEl.className = 'phase-divider';
+      if (visibleIdx >= revealedCount) divEl.classList.add('hidden');
+      var lineL = document.createElement('div');
+      lineL.className = 'phase-divider-line';
+      var txt = document.createElement('div');
+      txt.className = 'phase-divider-text';
+      txt.textContent = 'user types here';
+      var lineR = document.createElement('div');
+      lineR.className = 'phase-divider-line';
+      divEl.appendChild(lineL);
+      divEl.appendChild(txt);
+      divEl.appendChild(lineR);
+      panel.appendChild(divEl);
+      continue;
+    }
+
+    if (b.phase) {
+      var phaseEl = document.createElement('div');
+      phaseEl.className = 'phase-label';
+      if (visibleIdx >= revealedCount) phaseEl.classList.add('hidden');
+      phaseEl.textContent = b.phase;
+      panel.appendChild(phaseEl);
+    }
+
+    var row = document.createElement('div');
+    row.className = 'block-row';
+    if (visibleIdx >= revealedCount) row.classList.add('hidden');
+    if (visibleIdx === selectedIdx) row.classList.add('selected');
+    row.dataset.idx = visibleIdx;
+    (function(idx) {
+      row.addEventListener('click', function() { selectBlock(idx); });
+    })(visibleIdx);
+
+    var dot = document.createElement('div');
+    dot.className = 'block-dot ' + b.cat;
+    row.appendChild(dot);
+
+    var label = document.createElement('div');
+    label.className = 'block-label';
+    label.textContent = b.label;
+    row.appendChild(label);
+
+    var badge = document.createElement('span');
+    badge.className = 'block-badge badge-' + b.cat;
+    badge.textContent = b.badge;
+    row.appendChild(badge);
+
+    var tokens = document.createElement('div');
+    tokens.className = 'block-tokens';
+    tokens.textContent = '+' + b.tokens;
+    row.appendChild(tokens);
+
+    panel.appendChild(row);
+    visibleIdx++;
+  }
+
+  // Step count
+  document.getElementById('stepCount').textContent = revealedCount > 0 ? 'Step ' + revealedCount + ' of ' + visibleBlocks.length : '';
+
+  // Next button
+  var btn = document.getElementById('btnNext');
+  btn.disabled = revealedCount >= visibleBlocks.length;
+  btn.textContent = revealedCount >= visibleBlocks.length ? 'Done' : revealedCount === 0 ? 'Start' : 'Next';
+
+  // Detail
+  renderDetail();
+
+  // Callout
+  var calloutIdx = Math.min(revealedCount, SCENARIO.callouts.length - 1);
+  document.getElementById('calloutText').textContent = SCENARIO.callouts[calloutIdx];
+}
+
+function selectBlock(idx) {
+  if (idx >= revealedCount) return;
+  selectedIdx = idx;
+  var rows = document.querySelectorAll('.block-row');
+  rows.forEach(function(r, i) { r.classList.toggle('selected', parseInt(r.dataset.idx) === idx); });
+  renderDetail();
+}
+
+function renderDetail() {
+  var panel = document.getElementById('detailPanel');
+  while (panel.firstChild) panel.removeChild(panel.firstChild);
+
+  if (selectedIdx < 0 || selectedIdx >= revealedCount) {
+    var empty = document.createElement('div');
+    empty.className = 'detail-empty';
+
+    var arrow = document.createElement('div');
+    arrow.className = 'arrow';
+    arrow.textContent = '←';
+    empty.appendChild(arrow);
+
+    var p = document.createElement('p');
+    var strong = document.createElement('strong');
+    strong.textContent = 'Start';
+    p.textContent = 'Press ';
+    p.appendChild(strong);
+    p.appendChild(document.createTextNode(' to step through the agent\'s context window'));
+    empty.appendChild(p);
+
+    var hint = document.createElement('div');
+    hint.className = 'hint';
+    hint.textContent = 'Each step adds tokens. Click any block to inspect its content.';
+    empty.appendChild(hint);
+
+    panel.appendChild(empty);
+    return;
+  }
+
+  var visibleBlocks = getVisibleBlocks();
+  var b = visibleBlocks[selectedIdx];
+
+  var catLabels = { prompt: 'Prompt', tool: 'Tool', memory: 'Memory', state: 'State', reason: 'Reasoning' };
+
+  var titleDiv = document.createElement('div');
+  titleDiv.className = 'detail-title';
+  var catSpan = document.createElement('span');
+  catSpan.className = 'detail-cat cat-' + b.cat;
+  catSpan.textContent = catLabels[b.cat] || b.cat;
+  titleDiv.appendChild(catSpan);
+  titleDiv.appendChild(document.createTextNode(' ' + b.label));
+  panel.appendChild(titleDiv);
+
+  var content = document.createElement('div');
+  content.className = 'detail-content';
+  content.textContent = b.content;
+  panel.appendChild(content);
+
+  if (b.concept) {
+    var conceptDiv = document.createElement('div');
+    conceptDiv.className = 'detail-concept';
+    conceptDiv.textContent = b.concept;
+    panel.appendChild(conceptDiv);
+  }
+}
+
+// Keyboard support
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); nextStep(); }
+  if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+    e.preventDefault();
+    if (revealedCount > 0) { revealedCount--; selectedIdx = revealedCount - 1; render(); }
+  }
+  if (e.key === 'r' || e.key === 'R') { resetSteps(); }
+  if (e.key === 'ArrowUp' && selectedIdx > 0) { e.preventDefault(); selectBlock(selectedIdx - 1); }
+  if (e.key === 'ArrowDown' && selectedIdx < revealedCount - 1) { e.preventDefault(); selectBlock(selectedIdx + 1); }
+});
+
+// Init
+render();
+</script>
+</body>
+</html>

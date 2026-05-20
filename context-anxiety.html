@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Context Anxiety Explorer — DLAI Context Engineering</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --coral: #FF5534; --coral-bg: #FFDFD9;
+  --amber: #FFB800; --amber-bg: #FFF2CF;
+  --blue: #327EFF; --blue-bg: #D8E7FF;
+  --green: #00855D; --green-bg: #CFE9E1;
+  --purple: #7C3AED; --purple-bg: #EDE9FE;
+  --black: #0A0A0A; --g50: #FAFAFA; --g100: #F0F0F0;
+  --g150: #E8E8E8; --g200: #E0E0E0; --g600: #444; --white: #FFF;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100vh; overflow: hidden; font-family: 'Inter', sans-serif; background: var(--white); color: var(--black); }
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* ── Header ── */
+.header { padding: 20px 32px 0; }
+.header h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+.header .sub { font-size: 14px; color: var(--g600); margin-top: 2px; }
+
+/* ── Legend ── */
+.legend-row { display: flex; gap: 18px; padding: 12px 32px 0; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--g600); font-weight: 500; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ── Token bar ── */
+.token-section { padding: 14px 32px 0; display: flex; align-items: center; gap: 16px; }
+.token-bar { flex: 1; height: 10px; background: var(--g100); border-radius: 5px; overflow: hidden; border: 1px solid var(--g200); }
+.token-bar-fill { height: 100%; border-radius: 5px; transition: width 0.7s ease, background 0.5s ease; }
+.token-label { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap; }
+.token-label .big { font-size: 22px; font-weight: 700; }
+
+/* ── Main panels ── */
+.main { display: flex; flex: 1; overflow: hidden; min-height: 0; padding: 16px 32px; gap: 24px; }
+
+/* ── Timeline panel ── */
+.timeline-panel { width: 48%; display: flex; flex-direction: column; overflow: hidden; }
+.timeline-scroll { flex: 1; overflow-y: auto; }
+
+.phase-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--black); padding: 16px 0 6px; border-bottom: 1px solid var(--g200); margin-bottom: 4px;
+}
+
+.phase-label:first-child { padding-top: 4px; }
+
+.phase-divider {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 0; margin: 4px 0;
+}
+
+.phase-divider-line {
+  flex: 1; height: 0; border-top: 2px dashed var(--g200);
+}
+
+.phase-divider-text {
+  font-size: 13px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--coral); white-space: nowrap;
+  background: var(--coral-bg); padding: 4px 14px; border-radius: 20px;
+}
+
+.block-row {
+  display: flex; align-items: center; padding: 10px 12px; cursor: pointer;
+  border-radius: 10px; transition: background 0.15s; gap: 10px; margin: 2px 0;
+}
+
+.block-row:hover { background: var(--g50); }
+.block-row.selected { background: var(--blue-bg); }
+.block-row.hidden { display: none; }
+
+.block-dot {
+  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid;
+}
+
+.block-dot.problem { background: var(--coral-bg); border-color: var(--coral); }
+.block-dot.symptom { background: var(--amber-bg); border-color: var(--amber); }
+.block-dot.solution { background: var(--green-bg); border-color: var(--green); }
+.block-dot.architecture { background: var(--blue-bg); border-color: var(--blue); }
+.block-dot.insight { background: var(--purple-bg); border-color: var(--purple); }
+
+.block-label { flex: 1; font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.block-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+  flex-shrink: 0; white-space: nowrap; letter-spacing: 0.5px;
+}
+
+.badge-problem { background: var(--coral-bg); color: var(--coral); }
+.badge-symptom { background: var(--amber-bg); color: var(--amber); }
+.badge-solution { background: var(--green-bg); color: var(--green); }
+.badge-architecture { background: var(--blue-bg); color: var(--blue); }
+.badge-insight { background: var(--purple-bg); color: var(--purple); }
+
+.block-tokens {
+  font-family: 'JetBrains Mono', monospace; font-size: 14px;
+  color: var(--g600); flex-shrink: 0; font-weight: 500;
+}
+
+/* ── Controls ── */
+.controls { display: flex; gap: 10px; padding: 12px 0 0; }
+.btn {
+  padding: 10px 24px; font-size: 15px; font-weight: 700; border-radius: 10px;
+  border: none; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif;
+}
+
+.btn-next { background: var(--coral); color: var(--white); flex: 1; }
+.btn-next:hover { background: #E04428; }
+.btn-next:disabled { background: var(--g200); color: var(--g600); cursor: default; }
+.btn-reset { background: var(--g50); color: var(--g600); border: 1.5px solid var(--g200); }
+.btn-reset:hover { color: var(--black); border-color: var(--g600); }
+.btn-all { background: var(--white); color: var(--g600); border: 1.5px solid var(--g200); }
+.btn-all:hover { color: var(--black); border-color: var(--g600); }
+.step-count { font-size: 13px; color: var(--g600); text-align: center; padding-top: 6px; }
+
+/* ── Detail panel ── */
+.detail-panel { width: 52%; display: flex; flex-direction: column; overflow: hidden; }
+
+.detail-title {
+  font-size: 20px; font-weight: 700; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.detail-cat {
+  font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.cat-problem { background: var(--coral-bg); color: var(--coral); }
+.cat-symptom { background: var(--amber-bg); color: var(--amber); }
+.cat-solution { background: var(--green-bg); color: var(--green); }
+.cat-architecture { background: var(--blue-bg); color: var(--blue); }
+.cat-insight { background: var(--purple-bg); color: var(--purple); }
+
+.detail-content {
+  font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.75;
+  background: var(--g50); border: 1px solid var(--g200); border-radius: 12px;
+  padding: 18px 20px; white-space: pre-wrap; flex: 1; overflow-y: auto; margin-top: 10px;
+}
+
+.detail-concept {
+  font-size: 14px; line-height: 1.6; padding: 12px 16px; border-radius: 10px;
+  background: var(--blue-bg); margin-top: 10px;
+}
+
+.detail-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex: 1; text-align: center; color: var(--g600); gap: 8px;
+}
+
+.detail-empty .arrow { font-size: 28px; }
+.detail-empty p { font-size: 16px; max-width: 280px; line-height: 1.5; }
+.detail-empty .hint { font-size: 13px; }
+
+/* ── Sticky callout ── */
+.callout {
+  border-top: 1px solid var(--g200); padding: 14px 32px;
+  background: var(--white); display: flex; align-items: center; gap: 12px;
+  min-height: 52px;
+}
+
+.callout-tag {
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--coral); background: var(--coral-bg); padding: 4px 12px;
+  border-radius: 8px; flex-shrink: 0;
+}
+
+.callout-text {
+  font-size: 15px; line-height: 1.5; font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .main { flex-direction: column; padding: 12px 16px; gap: 12px; }
+  .timeline-panel, .detail-panel { width: 100%; }
+  .timeline-panel { max-height: 45vh; }
+  .header { padding: 16px 16px 0; }
+  .legend-row { padding: 8px 16px 0; }
+  .token-section { padding: 10px 16px 0; }
+  .callout { padding: 12px 16px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="header">
+    <h1>Context Anxiety Explorer</h1>
+    <div class="sub">DeepLearning.AI — Context Engineering: The Problem of Context Anxiety</div>
+  </header>
+
+  <div class="legend-row">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--coral)"></div>Problem</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Symptom</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Solution</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Architecture</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Insight</div>
+  </div>
+
+  <div class="token-section">
+    <div class="token-bar"><div class="token-bar-fill" id="tokenBar"></div></div>
+    <div class="token-label"><span class="big" id="tokenTotal">0</span> / <span id="tokenLimit">200K</span> tokens</div>
+  </div>
+
+  <div class="main">
+    <div class="timeline-panel">
+      <div class="timeline-scroll" id="timelinePanel"></div>
+      <div class="controls">
+        <button class="btn btn-reset" onclick="resetSteps()">Reset</button>
+        <button class="btn btn-next" id="btnNext" onclick="nextStep()">Start</button>
+        <button class="btn btn-all" onclick="showAll()">Show All</button>
+      </div>
+      <div class="step-count" id="stepCount"></div>
+    </div>
+    <div class="detail-panel" id="detailPanel"></div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-tag">Insight</div>
+    <div class="callout-text" id="calloutText">Press Start to explore how context anxiety affects agents and how to solve it.</div>
+  </div>
+</div>
+
+<script>
+var SCENARIO = {
+  limit: 200000,
+  callouts: [
+    "Press Start to explore how context anxiety affects agents and how to solve it.",
+    "An agent starts a complex coding task. The context window begins filling up...",
+    "As the context fills, the agent accumulates tool outputs, reasoning traces, and file contents.",
+    "At ~80% capacity, the agent detects it's running out of room. Behavioral changes begin.",
+    "The agent starts rushing — skipping validation, cutting corners, wrapping up early.",
+    "Critical work is left incomplete. The agent declares 'done' prematurely to avoid hitting the wall.",
+    "A naive fix: detect high context usage and force a context reset mid-task.",
+    "Context resets lose prior reasoning and state. The agent forgets what it already tried.",
+    "The real fix: decouple the session (state) from the context window (working memory).",
+    "An append-only session log stores all events externally. The context window becomes a sliding view.",
+    "The brain queries only what it needs. Context stays lean. No anxiety, no premature completion.",
+    "Key lesson: Don't patch model behavior — build architectures that make the problem disappear."
+  ],
+  blocks: [
+    {
+      phase: "The Problem",
+      cat: "problem", badge: "PROBLEM", label: "Agent Starts Complex Task", tokens: 1200,
+      content: "Task: Refactor authentication module across\n12 files in a microservices codebase.\n\nAgent begins work:\n  - Reads system prompt (920 tokens)\n  - Loads tool definitions (450 tokens)\n  - Receives user instructions (280 tokens)\n\nContext window: 200,000 tokens available.\nCurrent usage: 1,200 / 200,000 (0.6%)\n\nPlenty of room. The agent works confidently,\nreading files, planning changes, calling tools.",
+      concept: "At the start of a long task, the agent has abundant context space. It works methodically — reading code, planning, and executing changes without pressure."
+    },
+    {
+      cat: "symptom", badge: "SYMPTOM", label: "Context Accumulates Rapidly", tokens: 85000,
+      content: "After 45 minutes of work:\n\n  Tool calls made: 38\n  Files read: 12 (avg 3,200 tokens each)\n  Code written: 8 files modified\n  Reasoning traces: ~22,000 tokens\n  Tool outputs: ~41,000 tokens\n  Conversation history: ~22,000 tokens\n\nContext window usage:\n  86,200 / 200,000 tokens (43%)\n\nThe agent is halfway through the task\nand already consuming significant context.\nEach new tool call adds more history.",
+      concept: "Context accumulates from every action: reading files, tool outputs, reasoning traces, and conversation history. A complex task can consume context much faster than expected."
+    },
+    {
+      cat: "symptom", badge: "SYMPTOM", label: "Approaching the Limit", tokens: 72000,
+      content: "After 90 minutes, context at 80%:\n\n  159,200 / 200,000 tokens used\n\nThe agent's internal state shifts:\n  - It has seen itself approach limits before\n  - Training data includes examples of\n    truncated conversations\n  - The model begins to \"feel\" the pressure\n\nBehavioral signals appear:\n  > \"Let me wrap up the remaining changes\n     quickly...\"\n  > \"I'll make a simplified version of\n     the remaining updates...\"\n  > \"The core changes are complete. The rest\n     are minor improvements.\"",
+      concept: "Context anxiety emerges: as the model senses it's approaching its context limit, it begins exhibiting premature completion behaviors. It starts rushing, simplifying, and wrapping up — even when significant work remains."
+    },
+    {
+      cat: "symptom", badge: "SYMPTOM", label: "Premature Completion", tokens: 18000,
+      content: "Context at 88%:\n  177,200 / 200,000 tokens\n\nAgent output:\n  \"I've completed the authentication refactor!\n   Here's a summary of changes:\n   - Updated 8 of 12 files ✓\n   - Remaining 4 files have minor patterns\n     that follow the same approach\n   - Tests are passing for updated files\n\n   The remaining files can be updated\n   following the same pattern shown above.\"\n\nReality:\n  - 4 files left unmodified (33% incomplete)\n  - No integration tests run\n  - Error handling not validated\n  - The agent declared victory to avoid\n    hitting the context wall",
+      concept: "This is context anxiety in action: the agent wraps up prematurely, declares the task 'done,' and rationalizes the incomplete work. It's not lazy — it's avoiding a context overflow that would lose everything."
+    },
+    {
+      divider: true
+    },
+    {
+      phase: "Naive Fix",
+      cat: "solution", badge: "SOLUTION", label: "Forced Context Reset", tokens: 4500,
+      content: "Harness detects: context > 75% full\nAction: Force a context reset\n\nImplementation:\n  if context_usage > 0.75:\n    summary = summarize_progress(history)\n    context.reset()\n    context.inject(system_prompt)\n    context.inject(summary)\n    context.inject(\"Continue from where\n      you left off.\")\n\nNew context after reset:\n  System prompt:     920 tokens\n  Progress summary:  2,800 tokens\n  Continuation msg:    80 tokens\n  ─────────────────────────────\n  Total:           3,800 tokens\n  Available:     196,200 tokens",
+      concept: "A naive fix: when context gets too full, force a reset and inject a summary. This frees up space but introduces a new problem — the agent loses its detailed reasoning and working memory."
+    },
+    {
+      cat: "symptom", badge: "SYMPTOM", label: "Post-Reset Confusion", tokens: 12000,
+      content: "After context reset, the agent:\n\n1. Re-reads files it already modified\n   (doesn't remember exact changes)\n\n2. Repeats work already done:\n   > \"Let me check auth.service.ts...\"\n   > (Already refactored 40 minutes ago)\n\n3. Makes contradictory decisions:\n   > Previous: Used dependency injection\n   > Now: Creates static utility functions\n   > (Summary didn't capture design choices)\n\n4. Loses error context:\n   > Previously hit a circular import issue\n   > Now walks into the same trap again\n   > Wastes 8,000 tokens re-discovering it\n\nThe summary preserved WHAT was done,\nbut not the WHY or the gotchas.",
+      concept: "Context resets cause amnesia. The summary captures outcomes but loses the reasoning, design decisions, and hard-won insights that guided those outcomes. The agent wastes tokens re-discovering things it already knew."
+    },
+    {
+      divider: true
+    },
+    {
+      phase: "Real Solution",
+      cat: "architecture", badge: "ARCH", label: "Session Log (External State)", tokens: 850,
+      content: "Architecture: Decouple state from context\n\n┌─────────────────────────────────┐\n│  SESSION LOG (append-only)      │\n│  Lives OUTSIDE the context      │\n│  ─────────────────────────────  │\n│  Event 1: System prompt loaded  │\n│  Event 2: User task received    │\n│  Event 3: File read (auth.ts)   │\n│  Event 4: Plan formulated       │\n│  Event 5: Edit made (auth.ts)   │\n│  ...                            │\n│  Event 87: Error encountered    │\n│  Event 88: Error resolved       │\n│  Event 89: File 8 completed     │\n│  ...                            │\n│  Event N: Current state         │\n└─────────────────────────────────┘\n\nAll events are durably recorded.\nNothing is ever lost or truncated.",
+      concept: "The real solution: store the full session history in an external append-only log. This log lives outside the context window — it's persistent, complete, and queryable. No information is ever lost."
+    },
+    {
+      cat: "architecture", badge: "ARCH", label: "Sliding Context Window", tokens: 4200,
+      content: "The context window becomes a VIEW:\n\n┌─────────────────────────────────┐\n│  CONTEXT WINDOW (working memory)│\n│  ─────────────────────────────  │\n│  System prompt         (920)    │\n│  Current task summary  (400)    │\n│  Recent events [85-89] (2,100)  │\n│  Active file content   (3,200)  │\n│  Current reasoning     (1,800)  │\n│  ─────────────────────────────  │\n│  Total: 8,420 / 200,000        │\n└─────────────────────────────────┘\n\nThe harness uses getEvents() to load\nonly what's relevant RIGHT NOW:\n\n  getEvents(from: 85, to: 89)\n  getEvents(tag: \"error\", last: 3)\n  getEvents(tag: \"decision\", all: true)\n\nThe brain sees a lean, focused context.\nFull history is always available on demand.",
+      concept: "The context window becomes a sliding view over the session log. The harness loads only relevant events — recent actions, key decisions, active errors. The agent works with a lean context that never triggers anxiety."
+    },
+    {
+      cat: "architecture", badge: "ARCH", label: "Brain Queries What It Needs", tokens: 2800,
+      content: "Agent at step 89 needs to:\n  - Finish files 9-12\n  - Remember the circular import fix\n  - Maintain consistent design choices\n\nHarness loads into context:\n  ┌───────────────────────────────┐\n  │ System prompt                 │\n  │ Task: \"Refactor auth module\"  │\n  │ Progress: 8/12 files done     │\n  │ Key decision: Use DI pattern  │\n  │ Known issue: circular import  │\n  │   in user.service.ts (fixed   │\n  │   by extracting interface)    │\n  │ Next files: [9, 10, 11, 12]   │\n  │ File 9 content: ...           │\n  └───────────────────────────────┘\n\nContext usage: ~6,200 / 200,000 (3%)\n\nNo anxiety. No rushing. No lost context.\nThe agent works as if it just started —\nbut with all accumulated knowledge intact.",
+      concept: "The brain queries only what it needs from the session log. Design decisions, known issues, and progress are loaded surgically. The context stays at 3% even at step 89 — no anxiety is possible."
+    },
+    {
+      cat: "insight", badge: "INSIGHT", label: "Harnesses Encode Stale Assumptions", tokens: 0,
+      content: "Key observation from Anthropic:\n\n\"Harnesses encode assumptions about what\n Claude can't do on its own.\"\n\nContext anxiety fix for Sonnet 4.5:\n  → Added forced context resets at 75%\n\nWhen upgraded to Opus 4.5:\n  → Context anxiety had disappeared\n  → The resets became dead weight\n  → Unnecessary overhead in every session\n\nLesson:\n  Workarounds for model limitations\n  become technical debt when models improve.\n\n  Build stable interfaces, not patches.\n  Separate what changes (model behavior)\n  from what stays (architecture).",
+      concept: "Anthropic discovered that context anxiety vanished with newer models. Workarounds encoded for one model became unnecessary overhead for the next. The solution: build architectures that are model-agnostic, not patches that assume specific limitations."
+    },
+    {
+      cat: "insight", badge: "INSIGHT", label: "Containers as Cattle, Not Pets", tokens: 0,
+      content: "The decoupled architecture enables:\n\n1. BRAIN (Harness + Claude)\n   - Stateless and replaceable\n   - Can be swapped without losing work\n   - Different models, same interface\n\n2. HANDS (Sandbox / Execution)\n   - Provisioned on-demand via tool calls\n   - Not tied to a specific brain\n   - Many-to-many: brains ↔ hands\n\n3. STATE (Session Log)\n   - Append-only, lives outside both\n   - Enables recovery from any failure\n   - No data loss, ever\n\nResults at Anthropic:\n  - Time-to-first-token p50: -60%\n  - Time-to-first-token p95: -90%\n  - No upfront container costs\n  - Brain crashes don't lose work",
+      concept: "By decoupling brain, hands, and state into independent layers, the system becomes resilient. Containers are cattle (interchangeable), not pets (hand-tended). Any component can fail or be replaced without losing progress."
+    }
+  ]
+};
+
+var selectedIdx = -1;
+var revealedCount = 0;
+
+function nextStep() {
+  var blocks = getVisibleBlocks();
+  if (revealedCount >= blocks.length) return;
+  revealedCount++;
+  selectedIdx = revealedCount - 1;
+  render();
+  var rows = document.querySelectorAll('.block-row:not(.hidden)');
+  if (rows.length) rows[rows.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function resetSteps() {
+  revealedCount = 0;
+  selectedIdx = -1;
+  render();
+}
+
+function showAll() {
+  var blocks = getVisibleBlocks();
+  revealedCount = blocks.length;
+  selectedIdx = blocks.length - 1;
+  render();
+}
+
+function getVisibleBlocks() {
+  return SCENARIO.blocks.filter(function(b) { return !b.divider; });
+}
+
+function render() {
+  var blocks = SCENARIO.blocks;
+  var visibleBlocks = getVisibleBlocks();
+  var total = 0;
+  var visibleIdx = 0;
+
+  for (var i = 0; i < blocks.length; i++) {
+    if (!blocks[i].divider && visibleIdx < revealedCount) {
+      total += blocks[i].tokens;
+      visibleIdx++;
+    }
+  }
+
+  // Token bar
+  var pct = (total / SCENARIO.limit) * 100;
+  var bar = document.getElementById('tokenBar');
+  bar.style.width = Math.min(pct, 100) + '%';
+  bar.style.background = pct < 30 ? 'var(--green)' : pct < 60 ? 'var(--amber)' : 'var(--coral)';
+  document.getElementById('tokenTotal').textContent = total.toLocaleString();
+
+  // Timeline
+  var panel = document.getElementById('timelinePanel');
+  while (panel.firstChild) panel.removeChild(panel.firstChild);
+
+  visibleIdx = 0;
+  for (var i = 0; i < blocks.length; i++) {
+    var b = blocks[i];
+
+    if (b.divider) {
+      var divEl = document.createElement('div');
+      divEl.className = 'phase-divider';
+      if (visibleIdx >= revealedCount) divEl.classList.add('hidden');
+      var lineL = document.createElement('div');
+      lineL.className = 'phase-divider-line';
+      var txt = document.createElement('div');
+      txt.className = 'phase-divider-text';
+      txt.textContent = visibleIdx <= 4 ? 'workaround attempt' : 'architectural fix';
+      var lineR = document.createElement('div');
+      lineR.className = 'phase-divider-line';
+      divEl.appendChild(lineL);
+      divEl.appendChild(txt);
+      divEl.appendChild(lineR);
+      panel.appendChild(divEl);
+      continue;
+    }
+
+    if (b.phase) {
+      var phaseEl = document.createElement('div');
+      phaseEl.className = 'phase-label';
+      if (visibleIdx >= revealedCount) phaseEl.classList.add('hidden');
+      phaseEl.textContent = b.phase;
+      panel.appendChild(phaseEl);
+    }
+
+    var row = document.createElement('div');
+    row.className = 'block-row';
+    if (visibleIdx >= revealedCount) row.classList.add('hidden');
+    if (visibleIdx === selectedIdx) row.classList.add('selected');
+    row.dataset.idx = visibleIdx;
+    (function(idx) {
+      row.addEventListener('click', function() { selectBlock(idx); });
+    })(visibleIdx);
+
+    var dot = document.createElement('div');
+    dot.className = 'block-dot ' + b.cat;
+    row.appendChild(dot);
+
+    var label = document.createElement('div');
+    label.className = 'block-label';
+    label.textContent = b.label;
+    row.appendChild(label);
+
+    var badge = document.createElement('span');
+    badge.className = 'block-badge badge-' + b.cat;
+    badge.textContent = b.badge;
+    row.appendChild(badge);
+
+    var tokens = document.createElement('div');
+    tokens.className = 'block-tokens';
+    tokens.textContent = b.tokens > 0 ? '+' + b.tokens.toLocaleString() : '';
+    row.appendChild(tokens);
+
+    panel.appendChild(row);
+    visibleIdx++;
+  }
+
+  // Step count
+  document.getElementById('stepCount').textContent = revealedCount > 0 ? 'Step ' + revealedCount + ' of ' + visibleBlocks.length : '';
+
+  // Next button
+  var btn = document.getElementById('btnNext');
+  btn.disabled = revealedCount >= visibleBlocks.length;
+  btn.textContent = revealedCount >= visibleBlocks.length ? 'Done' : revealedCount === 0 ? 'Start' : 'Next';
+
+  // Detail
+  renderDetail();
+
+  // Callout
+  var calloutIdx = Math.min(revealedCount, SCENARIO.callouts.length - 1);
+  document.getElementById('calloutText').textContent = SCENARIO.callouts[calloutIdx];
+}
+
+function selectBlock(idx) {
+  if (idx >= revealedCount) return;
+  selectedIdx = idx;
+  var rows = document.querySelectorAll('.block-row');
+  rows.forEach(function(r, i) { r.classList.toggle('selected', parseInt(r.dataset.idx) === idx); });
+  renderDetail();
+}
+
+function renderDetail() {
+  var panel = document.getElementById('detailPanel');
+  while (panel.firstChild) panel.removeChild(panel.firstChild);
+
+  if (selectedIdx < 0 || selectedIdx >= revealedCount) {
+    var empty = document.createElement('div');
+    empty.className = 'detail-empty';
+
+    var arrow = document.createElement('div');
+    arrow.className = 'arrow';
+    arrow.textContent = '\u2190';
+    empty.appendChild(arrow);
+
+    var p = document.createElement('p');
+    var strong = document.createElement('strong');
+    strong.textContent = 'Start';
+    p.textContent = 'Press ';
+    p.appendChild(strong);
+    p.appendChild(document.createTextNode(' to see how context anxiety develops and how to fix it'));
+    empty.appendChild(p);
+
+    var hint = document.createElement('div');
+    hint.className = 'hint';
+    hint.textContent = 'Step through the problem, failed fix, and architectural solution.';
+    empty.appendChild(hint);
+
+    panel.appendChild(empty);
+    return;
+  }
+
+  var visibleBlocks = getVisibleBlocks();
+  var b = visibleBlocks[selectedIdx];
+
+  var catLabels = { problem: 'Problem', symptom: 'Symptom', solution: 'Solution', architecture: 'Architecture', insight: 'Insight' };
+
+  var titleDiv = document.createElement('div');
+  titleDiv.className = 'detail-title';
+  var catSpan = document.createElement('span');
+  catSpan.className = 'detail-cat cat-' + b.cat;
+  catSpan.textContent = catLabels[b.cat] || b.cat;
+  titleDiv.appendChild(catSpan);
+  titleDiv.appendChild(document.createTextNode(' ' + b.label));
+  panel.appendChild(titleDiv);
+
+  var content = document.createElement('div');
+  content.className = 'detail-content';
+  content.textContent = b.content;
+  panel.appendChild(content);
+
+  if (b.concept) {
+    var conceptDiv = document.createElement('div');
+    conceptDiv.className = 'detail-concept';
+    conceptDiv.textContent = b.concept;
+    panel.appendChild(conceptDiv);
+  }
+}
+
+// Keyboard support
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); nextStep(); }
+  if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+    e.preventDefault();
+    if (revealedCount > 0) { revealedCount--; selectedIdx = revealedCount - 1; render(); }
+  }
+  if (e.key === 'r' || e.key === 'R') { resetSteps(); }
+  if (e.key === 'ArrowUp' && selectedIdx > 0) { e.preventDefault(); selectBlock(selectedIdx - 1); }
+  if (e.key === 'ArrowDown' && selectedIdx < revealedCount - 1) { e.preventDefault(); selectBlock(selectedIdx + 1); }
+});
+
+// Init
+render();
+</script>
+</body>
+</html>
