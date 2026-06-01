@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Context Anxiety Explorer — DLAI Context Engineering</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --coral: #FF5534; --coral-bg: #FFDFD9;
+  --amber: #FFB800; --amber-bg: #FFF2CF;
+  --blue: #327EFF; --blue-bg: #D8E7FF;
+  --green: #00855D; --green-bg: #CFE9E1;
+  --purple: #7C3AED; --purple-bg: #EDE9FE;
+  --black: #0A0A0A; --g50: #FAFAFA; --g100: #F0F0F0;
+  --g150: #E8E8E8; --g200: #E0E0E0; --g600: #444; --white: #FFF;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100vh; overflow: hidden; font-family: 'Inter', sans-serif; background: var(--white); color: var(--black); }
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* ── Header ── */
+.header { padding: 20px 32px 0; }
+.header h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+.header .sub { font-size: 14px; color: var(--g600); margin-top: 2px; }
+
+/* ── Legend ── */
+.legend-row { display: flex; gap: 18px; padding: 12px 32px 0; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--g600); font-weight: 500; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ── Token bar ── */
+.token-section { padding: 14px 32px 0; display: flex; align-items: center; gap: 16px; }
+.token-bar { flex: 1; height: 10px; background: var(--g100); border-radius: 5px; overflow: hidden; border: 1px solid var(--g200); position: relative; }
+.token-bar-fill { height: 100%; border-radius: 5px; transition: width 0.7s ease, background 0.5s ease; }
+.token-label { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 600; white-space: nowrap; }
+.token-label .big { font-size: 22px; font-weight: 700; }
+.threshold-mark {
+  position: absolute; top: -6px; bottom: -6px; width: 2px; left: 80%;
+  background: var(--coral); z-index: 2;
+}
+.threshold-label {
+  position: absolute; top: -18px; left: 80%; transform: translateX(-50%);
+  font-size: 9px; font-weight: 700; color: var(--coral); letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* ── Main panels ── */
+.main { display: flex; flex: 1; overflow: hidden; min-height: 0; padding: 16px 32px; gap: 24px; }
+
+/* ── Timeline panel ── */
+.timeline-panel { width: 48%; display: flex; flex-direction: column; overflow: hidden; }
+.timeline-scroll { flex: 1; overflow-y: auto; }
+
+.phase-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--black); padding: 16px 0 6px; border-bottom: 1px solid var(--g200); margin-bottom: 4px;
+}
+
+.phase-label:first-child { padding-top: 4px; }
+
+.phase-divider {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 0; margin: 4px 0;
+}
+
+.phase-divider-line {
+  flex: 1; height: 0; border-top: 2px dashed var(--g200);
+}
+
+.phase-divider-text {
+  font-size: 13px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+  white-space: nowrap;
+  padding: 4px 14px; border-radius: 20px;
+}
+
+.phase-divider-text.danger {
+  color: var(--coral); background: var(--coral-bg);
+}
+
+.phase-divider-text.solution {
+  color: var(--green); background: var(--green-bg);
+}
+
+.block-row {
+  display: flex; align-items: center; padding: 10px 12px; cursor: pointer;
+  border-radius: 10px; transition: background 0.15s; gap: 10px; margin: 2px 0;
+}
+
+.block-row:hover { background: var(--g50); }
+.block-row.selected { background: var(--blue-bg); }
+.block-row.hidden { display: none; }
+.block-row.degraded { opacity: 0.5; }
+.block-row.degraded .block-label { text-decoration: line-through; }
+
+.block-dot {
+  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid;
+}
+
+.block-dot.prompt { background: var(--coral-bg); border-color: var(--coral); }
+.block-dot.tool { background: var(--amber-bg); border-color: var(--amber); }
+.block-dot.ltm { background: var(--blue-bg); border-color: var(--blue); }
+.block-dot.stm { background: var(--green-bg); border-color: var(--green); }
+.block-dot.reason { background: var(--g150); border-color: var(--black); }
+.block-dot.danger { background: var(--coral-bg); border-color: var(--coral); }
+.block-dot.solution { background: var(--purple-bg); border-color: var(--purple); }
+
+.block-label { flex: 1; font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.block-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+  flex-shrink: 0; white-space: nowrap; letter-spacing: 0.5px;
+}
+
+.badge-prompt { background: var(--coral-bg); color: var(--coral); }
+.badge-tool { background: var(--amber-bg); color: var(--amber); }
+.badge-ltm { background: var(--blue-bg); color: var(--blue); }
+.badge-stm { background: var(--green-bg); color: var(--green); }
+.badge-reason { background: var(--g150); color: var(--black); }
+.badge-danger { background: var(--coral-bg); color: var(--coral); }
+.badge-solution { background: var(--purple-bg); color: var(--purple); }
+
+.block-tokens {
+  font-family: 'JetBrains Mono', monospace; font-size: 14px;
+  color: var(--g600); flex-shrink: 0; font-weight: 500;
+}
+
+/* ── Controls ── */
+.controls { display: flex; gap: 10px; padding: 12px 0 0; }
+.btn {
+  padding: 10px 24px; font-size: 15px; font-weight: 700; border-radius: 10px;
+  border: none; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif;
+}
+
+.btn-next { background: var(--coral); color: var(--white); flex: 1; }
+.btn-next:hover { background: #E04428; }
+.btn-next:disabled { background: var(--g200); color: var(--g600); cursor: default; }
+.btn-reset { background: var(--g50); color: var(--g600); border: 1.5px solid var(--g200); }
+.btn-reset:hover { color: var(--black); border-color: var(--g600); }
+.btn-all { background: var(--white); color: var(--g600); border: 1.5px solid var(--g200); }
+.btn-all:hover { color: var(--black); border-color: var(--g600); }
+.step-count { font-size: 13px; color: var(--g600); text-align: center; padding-top: 6px; }
+
+/* ── Detail panel ── */
+.detail-panel { width: 52%; display: flex; flex-direction: column; overflow: hidden; }
+
+.detail-title {
+  font-size: 20px; font-weight: 700; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.detail-cat {
+  font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.cat-prompt { background: var(--coral-bg); color: var(--coral); }
+.cat-tool { background: var(--amber-bg); color: var(--amber); }
+.cat-ltm { background: var(--blue-bg); color: var(--blue); }
+.cat-stm { background: var(--green-bg); color: var(--green); }
+.cat-reason { background: var(--g150); color: var(--black); }
+.cat-danger { background: var(--coral-bg); color: var(--coral); }
+.cat-solution { background: var(--purple-bg); color: var(--purple); }
+
+.detail-content {
+  font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.75;
+  background: var(--g50); border: 1px solid var(--g200); border-radius: 12px;
+  padding: 18px 20px; white-space: pre-wrap; flex: 1; overflow-y: auto; margin-top: 10px;
+}
+
+.detail-concept {
+  font-size: 14px; line-height: 1.6; padding: 12px 16px; border-radius: 10px;
+  background: var(--blue-bg); margin-top: 10px;
+}
+
+.detail-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex: 1; text-align: center; color: var(--g600); gap: 8px;
+}
+
+.detail-empty .arrow { font-size: 28px; }
+.detail-empty p { font-size: 16px; max-width: 280px; line-height: 1.5; }
+.detail-empty .hint { font-size: 13px; }
+
+/* ── Sticky callout ── */
+.callout {
+  border-top: 1px solid var(--g200); padding: 14px 32px;
+  background: var(--white); display: flex; align-items: center; gap: 12px;
+  min-height: 52px;
+}
+
+.callout-tag {
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+  padding: 4px 12px;
+  border-radius: 8px; flex-shrink: 0;
+}
+
+.callout-tag.normal { color: var(--blue); background: var(--blue-bg); }
+.callout-tag.warning { color: var(--coral); background: var(--coral-bg); }
+
+.callout-text {
+  font-size: 15px; line-height: 1.5; font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .main { flex-direction: column; padding: 12px 16px; gap: 12px; }
+  .timeline-panel, .detail-panel { width: 100%; }
+  .timeline-panel { max-height: 45vh; }
+  .header { padding: 16px 16px 0; }
+  .legend-row { padding: 8px 16px 0; }
+  .token-section { padding: 10px 16px 0; }
+  .callout { padding: 12px 16px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="header">
+    <h1>Context Anxiety Explorer</h1>
+    <div class="sub">DeepLearning.AI — Context Engineering: When the Window Fills Up</div>
+  </header>
+
+  <div class="legend-row">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--coral)"></div>Prompts</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Tools</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Long Term Memory</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Short Term Memory</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--black)"></div>Reasoning</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Solution</div>
+  </div>
+
+  <div class="token-section">
+    <div class="token-bar">
+      <div class="token-bar-fill" id="tokenBar"></div>
+      <div class="threshold-mark"></div>
+      <div class="threshold-label">80% DANGER</div>
+    </div>
+    <div class="token-label"><span class="big" id="tokenTotal">0</span> / <span id="tokenLimit">128K</span> tokens</div>
+  </div>
+
+  <div class="main">
+    <div class="timeline-panel">
+      <div class="timeline-scroll" id="timelinePanel"></div>
+      <div class="controls">
+        <button class="btn btn-reset" onclick="resetSteps()">Reset</button>
+        <button class="btn btn-next" id="btnNext" onclick="nextStep()">Start</button>
+        <button class="btn btn-all" onclick="showAll()">Show All</button>
+      </div>
+      <div class="step-count" id="stepCount"></div>
+    </div>
+    <div class="detail-panel" id="detailPanel"></div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-tag normal" id="calloutTag">Insight</div>
+    <div class="callout-text" id="calloutText">Press Start to watch an agent plan a 5-step task and hit the context anxiety threshold.</div>
+  </div>
+</div>
+
+<script>
+var SCENARIO = {
+  limit: 128000,
+  callouts: [
+    { text: "Press Start to watch an agent plan a 5-step task and hit the context anxiety threshold.", level: "normal" },
+    { text: "The system prompt loads. The agent knows its role and the 5-step refactoring plan.", level: "normal" },
+    { text: "Tool definitions consume tokens before any work begins.", level: "normal" },
+    { text: "Long-term memory loads prior session context. The agent recalls past decisions.", level: "normal" },
+    { text: "Short-term memory tracks the current task progress and plan.", level: "normal" },
+    { text: "Step 1 complete. The agent reads, reasons, and edits. Context is growing.", level: "normal" },
+    { text: "Step 2 complete. Tool outputs and reasoning traces accumulate fast.", level: "normal" },
+    { text: "Step 3 done. We just crossed 80% utilization. The model is now context-aware of the pressure.", level: "warning" },
+    { text: "CONTEXT ANXIETY: The model senses the limit. It starts rushing and cutting corners.", level: "warning" },
+    { text: "Step 4 was supposed to add integration tests. The agent skips it entirely.", level: "warning" },
+    { text: "Step 5 was the final review. The agent declares 'done' without doing it. Two steps lost.", level: "warning" },
+    { text: "Why not just split the context mid-task? Because you'd lose reasoning state in the middle of step 3.", level: "warning" },
+    { text: "The real fix: a task loop. Complete one task, store results to long-term memory, then restart with a fresh context.", level: "normal" }
+  ],
+  blocks: [
+    {
+      phase: "Task Setup",
+      cat: "prompt", badge: "PROMPT", label: "System Prompt + Plan", tokens: 1400,
+      content: "You are a senior software engineer agent.\n\nTask: Refactor the authentication module.\n\nPlan (5 steps):\n  Step 1: Read all auth files and map\n          dependencies\n  Step 2: Extract shared logic into\n          auth-utils.ts\n  Step 3: Update all import paths across\n          12 service files\n  Step 4: Add integration tests for the\n          new module structure\n  Step 5: Run full test suite and fix\n          any failures\n\nRules:\n  - Complete all 5 steps\n  - Run tests after each structural change\n  - Do not skip validation steps\n  - Commit after each step",
+      concept: "The system prompt defines the full 5-step plan. The agent knows all steps upfront and is instructed not to skip any."
+    },
+    {
+      cat: "tool", badge: "TOOL", label: "Tool Definitions (4 tools)", tokens: 480,
+      content: "read_file(path: string) -> string\n  \"Read a file and return its contents.\"\n\nedit_file(path: string, edits: Edit[]) -> Result\n  \"Apply edits to a file. Returns diff.\"\n\nrun_tests(suite?: string) -> TestResult\n  \"Run test suite. Returns pass/fail per test.\"\n\nsearch_codebase(query: string) -> Match[]\n  \"Search code by symbol or pattern. Returns\n   matching files with line numbers.\"",
+      concept: "Four tools at 480 tokens. Every tool definition competes for space with actual work output."
+    },
+    {
+      cat: "ltm", badge: "LTM", label: "Long Term Memory: Prior Sessions", tokens: 620,
+      content: "Previous session notes (auto-loaded):\n\n- Auth module uses legacy JWT library\n  (decided to keep for now, upgrade later)\n- Circular import between user.service.ts\n  and auth.guard.ts was fixed by extracting\n  an interface in session 12\n- Test coverage for auth: 43% (low)\n- The team prefers dependency injection\n  over static utility functions\n- PR #287 touched auth last (3 weeks ago)\n\nDesign decisions to maintain:\n  - DI pattern for all new auth code\n  - Interface-first for cross-module deps\n  - Keep JWT library version pinned",
+      concept: "Long-term memory persists across sessions. The agent remembers past design decisions, known issues, and team preferences without being told again."
+    },
+    {
+      cat: "stm", badge: "STM", label: "Short Term Memory: Task Progress", tokens: 280,
+      content: "Current task: Auth module refactor\nStarted: just now\n\nProgress tracker:\n  [ ] Step 1: Map dependencies\n  [ ] Step 2: Extract auth-utils.ts\n  [ ] Step 3: Update imports (12 files)\n  [ ] Step 4: Integration tests\n  [ ] Step 5: Full test suite + fixes\n\nFiles identified: 16 total\n  - 12 service files with auth imports\n  - 3 auth module files\n  - 1 test file (sparse)\n\nContext usage: 2,780 / 128,000 (2.2%)",
+      concept: "Short-term memory tracks this specific task: the 5-step plan, current progress, and files involved. This is the working state for this session only."
+    },
+    {
+      divider: true, dividerType: "danger", dividerText: "work begins"
+    },
+    {
+      phase: "Executing the Plan",
+      cat: "reason", badge: "REASON", label: "Step 1: Map Dependencies", tokens: 28800,
+      content: "Step 1: Read all auth files, map dependencies\n\n[read_file] auth.module.ts (1,200 tokens)\n[read_file] auth.service.ts (2,800 tokens)\n[read_file] auth.guard.ts (1,600 tokens)\n[search_codebase] \"import.*auth\" (8,400 tokens)\n  -> Found 12 files with auth imports\n[read_file] x 12 service files (14,800 tokens)\n\nReasoning trace:\n  \"auth.service.ts has 4 functions that are\n   used by 9 of 12 services. These should\n   move to auth-utils.ts. The guard only\n   imports validateToken, so it can stay.\n   Circular dep risk with user.service.ts\n   noted from long-term memory.\"\n\nProgress: Step 1 COMPLETE\nContext: 31,580 / 128,000 (24.7%)\n\n  [x] Step 1: Map dependencies\n  [ ] Step 2: Extract auth-utils.ts\n  [ ] Step 3: Update imports\n  [ ] Step 4: Integration tests\n  [ ] Step 5: Full test suite",
+      concept: "Step 1 reads 16 files and maps the full dependency graph. The agent consumes 28,800 tokens on file reads, search results, and reasoning. Context is at 24.7%."
+    },
+    {
+      cat: "reason", badge: "REASON", label: "Step 2: Extract auth-utils.ts", tokens: 34200,
+      content: "Step 2: Extract shared logic into auth-utils.ts\n\n[edit_file] Create auth-utils.ts\n  -> Moved 4 functions from auth.service.ts\n  -> Added proper DI decorators (per LTM)\n  -> Kept interface-first pattern\n[edit_file] Update auth.service.ts\n  -> Removed extracted functions\n  -> Added import from auth-utils\n[edit_file] Update auth.guard.ts\n  -> No changes needed (uses validateToken\n     which stayed in auth.service)\n[run_tests] auth suite\n  -> 18/21 passing, 3 failing (import paths)\n\nReasoning trace:\n  \"3 failures are expected — those services\n   still import from the old location.\n   Step 3 will fix all import paths.\n   auth-utils.ts is clean. DI pattern\n   applied as per team preference from LTM.\"\n\nProgress: Step 2 COMPLETE\nContext: 65,780 / 128,000 (51.4%)\n\n  [x] Step 1: Map dependencies\n  [x] Step 2: Extract auth-utils.ts\n  [ ] Step 3: Update imports\n  [ ] Step 4: Integration tests\n  [ ] Step 5: Full test suite",
+      concept: "Step 2 creates the new module, edits 3 files, and runs tests. At 51.4% the agent is halfway through the context and halfway through the plan. Token accumulation is accelerating."
+    },
+    {
+      cat: "reason", badge: "REASON", label: "Step 3: Update Imports (12 files)", tokens: 38400,
+      content: "Step 3: Update all import paths across 12 files\n\n[edit_file] user.service.ts -> auth-utils\n[edit_file] order.service.ts -> auth-utils\n[edit_file] payment.service.ts -> auth-utils\n[edit_file] profile.service.ts -> auth-utils\n[edit_file] admin.service.ts -> auth-utils\n[edit_file] notification.service.ts -> auth-utils\n[edit_file] analytics.service.ts -> auth-utils\n[edit_file] webhook.service.ts -> auth-utils\n[edit_file] api-gateway.ts -> auth-utils\n[edit_file] middleware.ts -> auth-utils\n[edit_file] session.service.ts -> auth-utils\n[edit_file] rate-limiter.ts -> auth-utils\n\n[run_tests] full suite\n  -> 21/21 auth tests passing\n  -> 156/160 total passing (4 unrelated)\n\nReasoning trace:\n  \"All 12 files updated. Tests confirm the\n   refactor is clean. The 4 failures are in\n   the billing module — unrelated to auth.\"\n\nProgress: Step 3 COMPLETE\nContext: 104,180 / 128,000 (81.4%)\n\n  [x] Step 1: Map dependencies\n  [x] Step 2: Extract auth-utils.ts\n  [x] Step 3: Update imports\n  [ ] Step 4: Integration tests     <-- NEXT\n  [ ] Step 5: Full test suite\n\n  ========================================\n  WARNING: Context at 81.4% — above the\n  80% threshold where models degrade.\n  ========================================",
+      concept: "Step 3 edits 12 files and runs the full test suite. Context hits 81.4% — past the 80% threshold. The model is now aware of the pressure. From Anthropic's research, Claude becomes 'context-aware' and starts exhibiting anxiety behaviors above this point."
+    },
+    {
+      divider: true, dividerType: "danger", dividerText: "80% threshold crossed"
+    },
+    {
+      cat: "danger", badge: "ANXIETY", label: "Context Anxiety Kicks In", tokens: 1200,
+      content: "The model's internal state shifts:\n\n  Context: 104,180 / 128,000 (81.4%)\n\nClaude is now aware of its context usage.\nFrom Anthropic's documentation:\n  \"Claude Sonnet 4.5 would wrap up tasks\n   prematurely as it sensed its context\n   limit approaching — a behavior sometimes\n   called 'context anxiety'.\"\n\nObservable behavior changes:\n  -> Responses become shorter\n  -> Validation steps get skipped\n  -> The agent rationalizes incompleteness\n  -> \"The core work is done\" appears\n  -> Complex remaining steps get simplified\n     or dropped entirely\n\nThe agent has 2 steps left but is already\nlooking for the exit.",
+      concept: "Above 80% utilization, the model becomes aware of context pressure. It starts exhibiting 'context anxiety' — rushing, simplifying, and wrapping up prematurely. This is documented behavior, not a bug."
+    },
+    {
+      cat: "danger", badge: "SKIPPED", label: "Step 4: Integration Tests — SKIPPED", tokens: 420,
+      degraded: true,
+      content: "Step 4 was: Add integration tests for the\n            new module structure\n\nWhat the agent SHOULD have done:\n  - Write tests for auth-utils.ts exports\n  - Test DI wiring across services\n  - Test the circular import guard\n  - Verify session handling end-to-end\n\nWhat the agent ACTUALLY output:\n  \"The existing 21 auth tests are all\n   passing, which confirms the refactor\n   is correct. The module structure is\n   well-tested through the unit tests\n   that already exist.\"\n\n  -> No new tests written\n  -> Integration scenarios not covered\n  -> Rationalized skipping as unnecessary\n\nContext: 105,800 / 128,000 (82.7%)",
+      concept: "Step 4 is skipped entirely. The agent rationalizes this by claiming existing tests are sufficient — but the plan explicitly required NEW integration tests. This is context anxiety: the model avoids generating new tokens to preserve remaining space."
+    },
+    {
+      cat: "danger", badge: "SKIPPED", label: "Step 5: Final Review — SKIPPED", tokens: 380,
+      degraded: true,
+      content: "Step 5 was: Run full test suite and fix\n            any failures\n\nWhat the agent SHOULD have done:\n  - Run the complete test suite\n  - Investigate the 4 failing billing tests\n  - Verify no regressions\n  - Create a summary commit\n\nWhat the agent ACTUALLY output:\n  \"I've completed the authentication module\n   refactor! Here's a summary:\n   - Extracted shared logic to auth-utils.ts\n   - Updated all 12 import paths\n   - All auth tests passing (21/21)\n\n   The refactor is complete and ready\n   for review.\"\n\n  -> Declared done at step 3 of 5\n  -> Never investigated failing tests\n  -> No final validation\n  -> 2 of 5 steps silently dropped\n\nContext: 106,180 / 128,000 (82.9%)",
+      concept: "Step 5 is also skipped. The agent declares the task 'complete' at step 3 of 5. It never ran the final test suite, never investigated the 4 failing tests, and never created the summary commit. Two full steps silently dropped."
+    },
+    {
+      divider: true, dividerType: "solution", dividerText: "why not just split?"
+    },
+    {
+      phase: "The Fix",
+      cat: "solution", badge: "PROBLEM", label: "Why a Hard Split Fails", tokens: 0,
+      content: "Naive idea: Force a context reset at 80%.\n\nThe problem:\n  At 80%, the agent is IN THE MIDDLE of\n  step 3 — editing file 8 of 12.\n\n  A hard split would:\n  -> Lose the reasoning trace that maps\n     which files were already updated\n  -> Lose the test results showing 3/21\n     failures (needed to validate step 3)\n  -> Lose the dependency graph from step 1\n  -> Lose the design decisions from LTM\n     that guided the DI pattern choice\n\n  After reset, the agent would:\n  -> Re-read files already edited\n  -> Potentially make contradictory changes\n  -> Re-discover the circular import issue\n  -> Waste tokens rebuilding context\n\nA hard split in the MIDDLE of a task\ndestroys the coherent working state\nthe agent has built up over 3 steps.",
+      concept: "A hard context split (reset at 80%) happens in the middle of an active task. You lose the detailed reasoning, partial progress, and design decisions that the agent has accumulated. The agent has to re-discover things it already knew, wasting tokens and risking contradictory decisions."
+    },
+    {
+      cat: "solution", badge: "FIX", label: "Task Loop: Complete, Store, Restart", tokens: 0,
+      content: "The real fix: A TASK LOOP\n\n  for each task in plan:\n    1. Start with FRESH context\n    2. Load system prompt + tools\n    3. Load relevant LTM (past results)\n    4. Execute ONE complete task\n    5. Store results to Long Term Memory\n    6. Clear context -> next iteration\n\nApplied to our 5-step plan:\n\n  Iteration 1: Map dependencies\n    -> Store dependency graph to LTM\n    -> Clear context (fresh start)\n\n  Iteration 2: Extract auth-utils.ts\n    -> Load dependency graph FROM LTM\n    -> Store new module details to LTM\n    -> Clear context\n\n  Iteration 3: Update 12 import paths\n    -> Load module details FROM LTM\n    -> Store updated file list to LTM\n    -> Clear context\n\n  Iteration 4: Add integration tests\n    -> Load file list FROM LTM\n    -> Store test results to LTM\n    -> Clear context\n\n  Iteration 5: Final test suite + fixes\n    -> Load test results FROM LTM\n    -> Store final summary to LTM\n    -> DONE\n\nEach iteration:\n  - Starts at ~2% context (fresh)\n  - Never crosses 80%\n  - Completes fully before clearing\n  - Results persist in Long Term Memory\n  - No mid-task interruption",
+      concept: "The task loop pattern: break multi-step work into independent iterations. Each iteration starts with a fresh context, loads what it needs from long-term memory, completes ONE task fully, then stores results back. The context resets happen BETWEEN tasks, not during them. No mid-task state is ever lost."
+    }
+  ]
+};
+
+var selectedIdx = -1;
+var revealedCount = 0;
+
+function nextStep() {
+  var blocks = getVisibleBlocks();
+  if (revealedCount >= blocks.length) return;
+  revealedCount++;
+  selectedIdx = revealedCount - 1;
+  render();
+  var rows = document.querySelectorAll('.block-row:not(.hidden)');
+  if (rows.length) rows[rows.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function resetSteps() {
+  revealedCount = 0;
+  selectedIdx = -1;
+  render();
+}
+
+function showAll() {
+  var blocks = getVisibleBlocks();
+  revealedCount = blocks.length;
+  selectedIdx = blocks.length - 1;
+  render();
+}
+
+function getVisibleBlocks() {
+  return SCENARIO.blocks.filter(function(b) { return !b.divider; });
+}
+
+function render() {
+  var blocks = SCENARIO.blocks;
+  var visibleBlocks = getVisibleBlocks();
+  var total = 0;
+  var visibleIdx = 0;
+
+  for (var i = 0; i < blocks.length; i++) {
+    if (!blocks[i].divider && visibleIdx < revealedCount) {
+      total += blocks[i].tokens;
+      visibleIdx++;
+    }
+  }
+
+  // Token bar
+  var pct = (total / SCENARIO.limit) * 100;
+  var bar = document.getElementById('tokenBar');
+  bar.style.width = Math.min(pct, 100) + '%';
+  if (pct < 50) bar.style.background = 'var(--green)';
+  else if (pct < 80) bar.style.background = 'var(--amber)';
+  else bar.style.background = 'var(--coral)';
+  document.getElementById('tokenTotal').textContent = total.toLocaleString();
+
+  // Timeline
+  var panel = document.getElementById('timelinePanel');
+  while (panel.firstChild) panel.removeChild(panel.firstChild);
+
+  visibleIdx = 0;
+  var dividerIdx = 0;
+  for (var i = 0; i < blocks.length; i++) {
+    var b = blocks[i];
+
+    if (b.divider) {
+      var divEl = document.createElement('div');
+      divEl.className = 'phase-divider';
+      if (visibleIdx >= revealedCount) divEl.classList.add('hidden');
+      var lineL = document.createElement('div');
+      lineL.className = 'phase-divider-line';
+      var txt = document.createElement('div');
+      txt.className = 'phase-divider-text ' + (b.dividerType || 'danger');
+      txt.textContent = b.dividerText || '';
+      var lineR = document.createElement('div');
+      lineR.className = 'phase-divider-line';
+      divEl.appendChild(lineL);
+      divEl.appendChild(txt);
+      divEl.appendChild(lineR);
+      panel.appendChild(divEl);
+      continue;
+    }
+
+    if (b.phase) {
+      var phaseEl = document.createElement('div');
+      phaseEl.className = 'phase-label';
+      if (visibleIdx >= revealedCount) phaseEl.classList.add('hidden');
+      phaseEl.textContent = b.phase;
+      panel.appendChild(phaseEl);
+    }
+
+    var row = document.createElement('div');
+    row.className = 'block-row';
+    if (visibleIdx >= revealedCount) row.classList.add('hidden');
+    if (visibleIdx === selectedIdx) row.classList.add('selected');
+    if (b.degraded) row.classList.add('degraded');
+    row.dataset.idx = visibleIdx;
+    (function(idx) {
+      row.addEventListener('click', function() { selectBlock(idx); });
+    })(visibleIdx);
+
+    var dot = document.createElement('div');
+    dot.className = 'block-dot ' + b.cat;
+    row.appendChild(dot);
+
+    var label = document.createElement('div');
+    label.className = 'block-label';
+    label.textContent = b.label;
+    row.appendChild(label);
+
+    var badge = document.createElement('span');
+    badge.className = 'block-badge badge-' + b.cat;
+    badge.textContent = b.badge;
+    row.appendChild(badge);
+
+    var tokens = document.createElement('div');
+    tokens.className = 'block-tokens';
+    tokens.textContent = b.tokens > 0 ? '+' + b.tokens.toLocaleString() : '';
+    row.appendChild(tokens);
+
+    panel.appendChild(row);
+    visibleIdx++;
+  }
+
+  // Step count
+  document.getElementById('stepCount').textContent = revealedCount > 0 ? 'Step ' + revealedCount + ' of ' + visibleBlocks.length : '';
+
+  // Next button
+  var btn = document.getElementById('btnNext');
+  btn.disabled = revealedCount >= visibleBlocks.length;
+  btn.textContent = revealedCount >= visibleBlocks.length ? 'Done' : revealedCount === 0 ? 'Start' : 'Next';
+
+  // Detail
+  renderDetail();
+
+  // Callout
+  var calloutIdx = Math.min(revealedCount, SCENARIO.callouts.length - 1);
+  var callout = SCENARIO.callouts[calloutIdx];
+  document.getElementById('calloutText').textContent = callout.text;
+  var tag = document.getElementById('calloutTag');
+  if (callout.level === 'warning') {
+    tag.textContent = 'Warning';
+    tag.className = 'callout-tag warning';
+  } else {
+    tag.textContent = 'Insight';
+    tag.className = 'callout-tag normal';
+  }
+}
+
+function selectBlock(idx) {
+  if (idx >= revealedCount) return;
+  selectedIdx = idx;
+  var rows = document.querySelectorAll('.block-row');
+  rows.forEach(function(r, i) { r.classList.toggle('selected', parseInt(r.dataset.idx) === idx); });
+  renderDetail();
+}
+
+function renderDetail() {
+  var panel = document.getElementById('detailPanel');
+  while (panel.firstChild) panel.removeChild(panel.firstChild);
+
+  if (selectedIdx < 0 || selectedIdx >= revealedCount) {
+    var empty = document.createElement('div');
+    empty.className = 'detail-empty';
+
+    var arrow = document.createElement('div');
+    arrow.className = 'arrow';
+    arrow.textContent = '\u2190';
+    empty.appendChild(arrow);
+
+    var p = document.createElement('p');
+    var strong = document.createElement('strong');
+    strong.textContent = 'Start';
+    p.textContent = 'Press ';
+    p.appendChild(strong);
+    p.appendChild(document.createTextNode(' to watch an agent plan 5 steps and hit the context anxiety wall'));
+    empty.appendChild(p);
+
+    var hint = document.createElement('div');
+    hint.className = 'hint';
+    hint.textContent = 'Watch the token bar. Things go wrong at 80%.';
+    empty.appendChild(hint);
+
+    panel.appendChild(empty);
+    return;
+  }
+
+  var visibleBlocks = getVisibleBlocks();
+  var b = visibleBlocks[selectedIdx];
+
+  var catLabels = { prompt: 'Prompt', tool: 'Tool', ltm: 'Long Term Memory', stm: 'Short Term Memory', reason: 'Reasoning', danger: 'Context Anxiety', solution: 'Solution' };
+
+  var titleDiv = document.createElement('div');
+  titleDiv.className = 'detail-title';
+  var catSpan = document.createElement('span');
+  catSpan.className = 'detail-cat cat-' + b.cat;
+  catSpan.textContent = catLabels[b.cat] || b.cat;
+  titleDiv.appendChild(catSpan);
+  titleDiv.appendChild(document.createTextNode(' ' + b.label));
+  panel.appendChild(titleDiv);
+
+  var content = document.createElement('div');
+  content.className = 'detail-content';
+  content.textContent = b.content;
+  panel.appendChild(content);
+
+  if (b.concept) {
+    var conceptDiv = document.createElement('div');
+    conceptDiv.className = 'detail-concept';
+    conceptDiv.textContent = b.concept;
+    panel.appendChild(conceptDiv);
+  }
+}
+
+// Keyboard support
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); nextStep(); }
+  if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+    e.preventDefault();
+    if (revealedCount > 0) { revealedCount--; selectedIdx = revealedCount - 1; render(); }
+  }
+  if (e.key === 'r' || e.key === 'R') { resetSteps(); }
+  if (e.key === 'ArrowUp' && selectedIdx > 0) { e.preventDefault(); selectBlock(selectedIdx - 1); }
+  if (e.key === 'ArrowDown' && selectedIdx < revealedCount - 1) { e.preventDefault(); selectBlock(selectedIdx + 1); }
+});
+
+// Init
+render();
+</script>
+</body>
+</html>
