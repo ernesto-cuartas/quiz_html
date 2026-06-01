@@ -339,41 +339,8 @@ body {
 </style>
 </head>
 <body>
-
-<!-- Shared SVG defs -->
-<svg style="position:absolute;width:0;height:0">
-  <defs>
-    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="var(--g300)"/>
-    </marker>
-    <marker id="arrowhead-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="var(--blue)"/>
-    </marker>
-  </defs>
-</svg>
-
-<!-- ====== INTRO ====== -->
-<div class="section" style="min-height:60vh">
-  <div class="inner hero">
-    <h1 class="reveal">Identify the <em>failure mode</em></h1>
-    <p class="sub reveal d1">Examine how one incorrect piece of data entering the agent's context causes errors to compound across subsequent turns. Then identify the failure mode.</p>
-    <div class="scroll-hint reveal d2">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M4 9l4 4 4-4"/></svg>
-      Scroll to explore the example
-    </div>
-  </div>
-</div>
-
-<!-- ====== SCENARIO ====== -->
-<div class="section" id="scenario">
-  <div class="inner">
-    <div class="mode-header">
-      <div class="mode-tag reveal">Scenario</div>
-      <h2 class="mode-title reveal d1">One <em>bad fact</em> enters early. Every later step trusts it.</h2>
-      <p class="mode-desc reveal d2">A customer service agent retrieves incorrect account data from a tool. Watch how the error propagates through the conversation.</p>
-    </div>
-
-    <div class="comparison reveal d3">
+<div style="max-width:960px; margin:0 auto; padding:40px 24px;">
+    <div class="comparison">
       <!-- BROKEN RUN -->
       <div class="run-panel broken">
         <div class="run-label broken-label"><span class="icon">&times;</span> Broken Run</div>
@@ -426,77 +393,6 @@ body {
         </div>
       </div>
     </div>
-
-    <!-- FIX EXPLANATION -->
-    <div class="fix-section reveal d4">
-      <button class="fix-trigger" onclick="toggleFix(this)">
-        <span class="arrow">&#9656;</span> Why does the fix work? &mdash; <em style="font-weight:400; color:var(--g600)">Verification gate</em>
-      </button>
-      <div class="fix-body">
-        <div class="fix-diagram">
-          <svg class="pipeline-svg" viewBox="0 0 700 210">
-            <!-- Source: Tool Result -->
-            <rect class="box box-default" x="10" y="30" width="140" height="150" rx="8"/>
-            <text class="label-default" x="80" y="22" text-anchor="middle" font-size="11">Tool Result</text>
-            <!-- 3 facts inside tool result -->
-            <rect x="22" y="44" width="116" height="32" rx="6" fill="var(--green-bg)" stroke="var(--green)" stroke-width="1.5"/>
-            <text x="80" y="64" text-anchor="middle" font-size="11" fill="var(--black)" font-weight="500">Billing DB: Free</text>
-            <rect x="22" y="84" width="116" height="32" rx="6" fill="var(--coral-bg)" stroke="var(--coral)" stroke-width="1.5"/>
-            <text x="80" y="104" text-anchor="middle" font-size="11" fill="var(--coral)" font-weight="600">Cache: Premium</text>
-            <rect x="22" y="124" width="116" height="32" rx="6" fill="var(--green-bg)" stroke="var(--green)" stroke-width="1.5"/>
-            <text x="80" y="144" text-anchor="middle" font-size="11" fill="var(--black)" font-weight="500">Account API: Free</text>
-
-            <!-- Arrows from source to context -->
-            <line class="arrow-line" x1="150" y1="60" x2="370" y2="60"/>
-            <line x1="150" y1="100" x2="370" y2="100" stroke="var(--coral)" stroke-width="2" stroke-dasharray="6 4" fill="none"/>
-            <line class="arrow-line" x1="150" y1="140" x2="370" y2="140"/>
-
-            <!-- Context Window -->
-            <rect class="box box-default" x="375" y="30" width="150" height="150" rx="8"/>
-            <text class="label-default" x="450" y="22" text-anchor="middle" font-size="11">Context Window</text>
-            <rect x="387" y="44" width="126" height="32" rx="6" fill="var(--green-bg)" stroke="var(--green)" stroke-width="1.5"/>
-            <text x="450" y="64" text-anchor="middle" font-size="11" fill="var(--black)" font-weight="500">Billing DB: Free</text>
-            <rect x="387" y="84" width="126" height="32" rx="6" fill="var(--coral-bg)" stroke="var(--coral)" stroke-width="2"/>
-            <text x="450" y="104" text-anchor="middle" font-size="11" fill="var(--coral)" font-weight="700">Cache: Premium</text>
-            <rect x="387" y="124" width="126" height="32" rx="6" fill="var(--green-bg)" stroke="var(--green)" stroke-width="1.5"/>
-            <text x="450" y="144" text-anchor="middle" font-size="11" fill="var(--black)" font-weight="500">Account API: Free</text>
-
-            <!-- Arrow to Output -->
-            <line class="arrow-line" x1="525" y1="105" x2="580" y2="105"/>
-            <rect class="box box-broken" x="585" y="80" width="105" height="50" rx="8"/>
-            <text class="label-broken" x="637" y="102" text-anchor="middle" font-size="11">Wrong Answer</text>
-            <text x="637" y="118" text-anchor="middle" font-size="9" fill="var(--coral)" opacity="0.8">trusts bad source</text>
-
-            <!-- FIX: Verification gate (fades in) -->
-            <rect class="box box-fix" x="215" y="72" width="100" height="56" rx="8"/>
-            <text class="label-fix" x="265" y="96" text-anchor="middle" font-size="11">Verify Gate</text>
-            <text class="label-fix" x="265" y="112" text-anchor="middle" font-size="9">cross-check</text>
-            <!-- X mark blocking the bad fact -->
-            <line class="fix-arrow" x1="255" y1="88" x2="275" y2="108" stroke="var(--blue)" stroke-width="3" stroke-linecap="round" style="marker-end:none"/>
-            <line class="fix-arrow" x1="275" y1="88" x2="255" y2="108" stroke="var(--blue)" stroke-width="3" stroke-linecap="round" style="marker-end:none"/>
-          </svg>
-        </div>
-        <p class="fix-text">The healthy run uses a <strong>verification gate</strong>: before trusting any single data source, the agent cross-checks it against other authoritative sources (billing database, account API). When a stale cache returns "Premium" but two other sources say "Free tier," the agent resolves the conflict <em>before</em> the bad fact enters the conversation. This prevents a single incorrect datum from compounding across every subsequent turn.</p>
-      </div>
-    </div>
-  </div>
 </div>
-
-<script>
-/* Scroll reveal */
-var observer = new IntersectionObserver(function(entries) {
-  entries.forEach(function(entry) {
-    if (entry.isIntersecting) entry.target.classList.add('visible');
-  });
-}, { threshold: 0.15 });
-
-document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
-
-/* Fix toggle */
-function toggleFix(btn) {
-  var section = btn.parentElement;
-  section.classList.toggle('open');
-}
-</script>
 </body>
 </html>

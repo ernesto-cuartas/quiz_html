@@ -327,40 +327,8 @@ body {
 </style>
 </head>
 <body>
-
-<svg style="position:absolute;width:0;height:0">
-  <defs>
-    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="var(--g300)"/>
-    </marker>
-    <marker id="arrowhead-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="var(--blue)"/>
-    </marker>
-  </defs>
-</svg>
-
-<!-- ====== INTRO ====== -->
-<div class="section" style="min-height:60vh">
-  <div class="inner hero">
-    <h1 class="reveal">Identify the <em>failure mode</em></h1>
-    <p class="sub reveal d1">Examine how loading every available tool into the context causes the agent to conflate unrelated information into a single response. Then identify the failure mode.</p>
-    <div class="scroll-hint reveal d2">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M4 9l4 4 4-4"/></svg>
-      Scroll to explore the example
-    </div>
-  </div>
-</div>
-
-<!-- ====== SCENARIO ====== -->
-<div class="section" id="scenario">
-  <div class="inner">
-    <div class="mode-header">
-      <div class="mode-tag reveal">Scenario</div>
-      <h2 class="mode-title reveal d1">Right words, <em>wrong tool</em>. Off-topic content treated as relevant.</h2>
-      <p class="mode-desc reveal d2">An agent has 12 tools loaded in its context. The user asks a simple password question, but unrelated tool descriptions and documents bleed into the answer.</p>
-    </div>
-
-    <div class="comparison reveal d3">
+<div style="max-width:960px; margin:0 auto; padding:40px 24px;">
+    <div class="comparison">
       <!-- BROKEN RUN -->
       <div class="run-panel broken">
         <div class="run-label broken-label"><span class="icon">&times;</span> Broken Run</div>
@@ -392,79 +360,6 @@ body {
         </div>
       </div>
     </div>
-
-    <!-- FIX EXPLANATION -->
-    <div class="fix-section reveal d4">
-      <button class="fix-trigger" onclick="toggleFix(this)">
-        <span class="arrow">&#9656;</span> Why does the fix work? &mdash; <em style="font-weight:400; color:var(--g600)">Tool search &amp; intent matching</em>
-      </button>
-      <div class="fix-body">
-        <div class="fix-diagram">
-          <svg class="pipeline-svg" viewBox="0 0 700 220">
-            <!-- User query -->
-            <rect class="box box-default" x="10" y="80" width="120" height="44" rx="8"/>
-            <text class="label-default" x="70" y="100" text-anchor="middle" font-size="10" font-weight="600">User Query</text>
-            <text x="70" y="115" text-anchor="middle" font-size="9" fill="var(--g500)">"reset password"</text>
-
-            <!-- Arrow to tool registry -->
-            <line class="arrow-line" x1="130" y1="102" x2="175" y2="102"/>
-
-            <!-- Tool Registry (broken: all loaded) -->
-            <text x="260" y="18" text-anchor="middle" font-size="11" font-weight="600" fill="var(--coral)">All 12 tools loaded</text>
-            <rect class="box box-broken" x="180" y="28" width="70" height="24" rx="4"/>
-            <text x="215" y="44" text-anchor="middle" font-size="8" fill="var(--coral)">billing</text>
-            <rect class="box box-broken" x="255" y="28" width="70" height="24" rx="4"/>
-            <text x="290" y="44" text-anchor="middle" font-size="8" fill="var(--coral)">pricing</text>
-            <rect class="box box-broken" x="330" y="28" width="70" height="24" rx="4"/>
-            <text x="365" y="44" text-anchor="middle" font-size="8" fill="var(--coral)">analytics</text>
-            <rect class="box box-broken" x="180" y="56" width="70" height="24" rx="4"/>
-            <text x="215" y="72" text-anchor="middle" font-size="8" fill="var(--coral)">shipping</text>
-            <rect class="box" x="255" y="56" width="70" height="24" rx="4" stroke="var(--green)" fill="var(--green-bg)"/>
-            <text x="290" y="72" text-anchor="middle" font-size="8" fill="var(--green)">auth</text>
-            <rect class="box box-broken" x="330" y="56" width="70" height="24" rx="4"/>
-            <text x="365" y="72" text-anchor="middle" font-size="8" fill="var(--coral)">inventory</text>
-            <text x="290" y="98" text-anchor="middle" font-size="9" fill="var(--g400)">+6 more...</text>
-
-            <!-- Tool Search box (fix element) -->
-            <rect class="box box-fix" x="195" y="120" width="110" height="50" rx="8"/>
-            <text class="label-fix" x="250" y="142" text-anchor="middle" font-size="11" font-weight="600">Tool Search</text>
-            <text class="label-fix" x="250" y="156" text-anchor="middle" font-size="9">intent matching</text>
-
-            <!-- Arrow from query to tool search -->
-            <line class="fix-arrow" x1="100" y1="124" x2="193" y2="140" stroke="var(--blue)" stroke-width="1.5" stroke-dasharray="4 3" style="marker-end:none"/>
-
-            <!-- Arrow from tool search to selected tool -->
-            <line class="fix-arrow" x1="305" y1="145" x2="430" y2="145" stroke="var(--blue)" stroke-width="2" style="marker-end:none"/>
-            <polygon class="fix-arrow" points="428,139 442,145 428,151" fill="var(--blue)"/>
-
-            <!-- Selected tool result -->
-            <rect class="box" x="448" y="118" width="140" height="54" rx="8" stroke="var(--green)" fill="var(--green-bg)" stroke-width="2"/>
-            <text x="518" y="140" text-anchor="middle" font-size="11" font-weight="600" fill="var(--green)">auth tool only</text>
-            <text x="518" y="158" text-anchor="middle" font-size="9" fill="var(--green)">1 tool, not 12</text>
-
-            <!-- Summary -->
-            <text x="350" y="205" text-anchor="middle" font-size="11" fill="var(--g600)">12 tools &#x2192; intent match &#x2192; 1 right tool loaded</text>
-          </svg>
-        </div>
-        <p class="fix-text">Instead of loading every tool into context, use a <strong>tool search</strong> step that matches the user's intent to the right capability. When the agent only sees the auth tool and its docs, there is no pricing, legal, or shipping content to conflate into the answer. The context stays focused on exactly what the user asked about.</p>
-      </div>
-    </div>
-  </div>
 </div>
-
-<script>
-var observer = new IntersectionObserver(function(entries) {
-  entries.forEach(function(entry) {
-    if (entry.isIntersecting) entry.target.classList.add('visible');
-  });
-}, { threshold: 0.15 });
-
-document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
-
-function toggleFix(btn) {
-  var section = btn.parentElement;
-  section.classList.toggle('open');
-}
-</script>
 </body>
 </html>

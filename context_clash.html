@@ -345,40 +345,8 @@ body {
 </style>
 </head>
 <body>
-
-<svg style="position:absolute;width:0;height:0">
-  <defs>
-    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="var(--g300)"/>
-    </marker>
-    <marker id="arrowhead-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="var(--blue)"/>
-    </marker>
-  </defs>
-</svg>
-
-<!-- ====== INTRO ====== -->
-<div class="section" style="min-height:60vh">
-  <div class="inner hero">
-    <h1 class="reveal">Identify the <em>failure mode</em></h1>
-    <p class="sub reveal d1">Examine how two data sources that directly contradict each other force the agent to pick one arbitrarily, producing unreliable output. Then identify the failure mode.</p>
-    <div class="scroll-hint reveal d2">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M4 9l4 4 4-4"/></svg>
-      Scroll to explore the example
-    </div>
-  </div>
-</div>
-
-<!-- ====== SCENARIO ====== -->
-<div class="section" id="scenario">
-  <div class="inner">
-    <div class="mode-header">
-      <div class="mode-tag reveal">Scenario</div>
-      <h2 class="mode-title reveal d1">Two facts <em>contradict</em>. The model picks one — sometimes wrong.</h2>
-      <p class="mode-desc reveal d2">A customer service agent pulls account data from two sources. One says "Free tier," the other says "Premium." The agent must reconcile the contradiction — and picks arbitrarily.</p>
-    </div>
-
-    <div class="comparison reveal d3">
+<div style="max-width:960px; margin:0 auto; padding:40px 24px;">
+    <div class="comparison">
       <!-- BROKEN RUN -->
       <div class="run-panel broken">
         <div class="run-label broken-label"><span class="icon">&times;</span> Broken Run</div>
@@ -432,76 +400,6 @@ body {
         </div>
       </div>
     </div>
-
-    <!-- FIX EXPLANATION -->
-    <div class="fix-section reveal d4">
-      <button class="fix-trigger" onclick="toggleFix(this)">
-        <span class="arrow">&#9656;</span> Why does the fix work? &mdash; <em style="font-weight:400; color:var(--g600)">Collection forking</em>
-      </button>
-      <div class="fix-body">
-        <div class="fix-diagram">
-          <svg class="pipeline-svg" viewBox="0 0 700 220">
-            <!-- Two conflicting sources -->
-            <rect class="box box-broken" x="10" y="30" width="130" height="50" rx="8"/>
-            <text x="75" y="52" text-anchor="middle" font-size="10" font-weight="600" fill="var(--coral)">CRM Record</text>
-            <text x="75" y="68" text-anchor="middle" font-size="9" fill="var(--coral)">plan: Free</text>
-
-            <rect class="box box-broken" x="10" y="100" width="130" height="50" rx="8"/>
-            <text x="75" y="122" text-anchor="middle" font-size="10" font-weight="600" fill="var(--coral)">Billing Log</text>
-            <text x="75" y="138" text-anchor="middle" font-size="9" fill="var(--coral)">plan: Premium</text>
-
-            <!-- Clash symbol -->
-            <text x="75" y="92" text-anchor="middle" font-size="14" font-weight="700" fill="var(--coral)">&#x26A0; contradiction</text>
-
-            <!-- Arrow to fork -->
-            <line x1="140" y1="55" x2="210" y2="80" stroke="var(--g300)" stroke-width="1.5" stroke-dasharray="4 3"/>
-            <line x1="140" y1="125" x2="210" y2="100" stroke="var(--g300)" stroke-width="1.5" stroke-dasharray="4 3"/>
-
-            <!-- Collection Fork box (fix element) -->
-            <rect class="box box-fix" x="215" y="60" width="130" height="60" rx="8"/>
-            <text class="label-fix" x="280" y="82" text-anchor="middle" font-size="11" font-weight="600">Collection Fork</text>
-            <text class="label-fix" x="280" y="98" text-anchor="middle" font-size="9">version: 2024-03</text>
-            <text class="label-fix" x="280" y="112" text-anchor="middle" font-size="8">snapshot in time</text>
-
-            <!-- Arrow to versioned results -->
-            <line class="fix-arrow" x1="345" y1="90" x2="400" y2="90" stroke="var(--blue)" stroke-width="2" style="marker-end:none"/>
-            <polygon class="fix-arrow" points="398,84 412,90 398,96" fill="var(--blue)"/>
-
-            <!-- Versioned consistent sources -->
-            <rect class="box" x="418" y="30" width="150" height="50" rx="8" stroke="var(--green)" fill="var(--green-bg)" stroke-width="2"/>
-            <text x="493" y="52" text-anchor="middle" font-size="10" font-weight="600" fill="var(--green)">CRM (v2024-03)</text>
-            <text x="493" y="68" text-anchor="middle" font-size="9" fill="var(--green)">plan: Free &#x2713;</text>
-
-            <rect class="box" x="418" y="100" width="150" height="50" rx="8" stroke="var(--green)" fill="var(--green-bg)" stroke-width="2"/>
-            <text x="493" y="122" text-anchor="middle" font-size="10" font-weight="600" fill="var(--green)">Billing (v2024-03)</text>
-            <text x="493" y="138" text-anchor="middle" font-size="9" fill="var(--green)">plan: Free &#x2713;</text>
-
-            <!-- Consistent symbol -->
-            <text x="493" y="170" text-anchor="middle" font-size="11" font-weight="600" fill="var(--green)">&#x2713; consistent</text>
-
-            <!-- Summary -->
-            <text x="350" y="205" text-anchor="middle" font-size="11" fill="var(--g600)">Same point in time &#x2192; no contradiction &#x2192; deterministic answer</text>
-          </svg>
-        </div>
-        <p class="fix-text">The fix is <strong>collection forking</strong>: instead of querying live sources that may be out of sync, version all data collections to the same point in time. When the CRM and billing system both reflect the March 2024 snapshot, they agree — "Free tier" — and the contradiction disappears. The agent gives a deterministic, consistent answer every time.</p>
-      </div>
-    </div>
-  </div>
 </div>
-
-<script>
-var observer = new IntersectionObserver(function(entries) {
-  entries.forEach(function(entry) {
-    if (entry.isIntersecting) entry.target.classList.add('visible');
-  });
-}, { threshold: 0.15 });
-
-document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
-
-function toggleFix(btn) {
-  var section = btn.parentElement;
-  section.classList.toggle('open');
-}
-</script>
 </body>
 </html>
