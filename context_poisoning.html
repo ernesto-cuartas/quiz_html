@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Context Failure Mode Example — DeepLearning.AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --coral: #FF5534;
+  --coral-bg: #FFDFD9;
+  --amber: #FFB800;
+  --amber-bg: #FFF2CF;
+  --blue: #327EFF;
+  --blue-bg: #D8E7FF;
+  --green: #00855D;
+  --green-bg: #CFE9E1;
+  --black: #0A0A0A;
+  --white: #FFF;
+  --g50: #FAFAFA;
+  --g100: #F0F0F0;
+  --g150: #E8E8E8;
+  --g200: #E0E0E0;
+  --g300: #CCC;
+  --g400: #999;
+  --g500: #666;
+  --g600: #444;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--white);
+  color: var(--black);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Layout ---- */
+.section {
+  min-height: 80vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 64px 24px;
+}
+
+.inner { max-width: 960px; width: 100%; }
+
+/* ---- Scroll Animations ---- */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.4s ease-out, transform 0.4s cubic-bezier(0.22,1,0.36,1);
+}
+
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal.d1 { transition-delay: 0.05s; }
+.reveal.d2 { transition-delay: 0.12s; }
+.reveal.d3 { transition-delay: 0.19s; }
+.reveal.d4 { transition-delay: 0.26s; }
+
+/* ---- Hero ---- */
+.hero { text-align: left; padding-top: 60px; }
+
+.hero h1 {
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  line-height: 1.15;
+  max-width: 600px;
+}
+
+.hero h1 em { font-style: normal; color: var(--coral); }
+
+.hero .sub {
+  font-size: 17px;
+  color: var(--g600);
+  margin-top: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  max-width: 560px;
+}
+
+.scroll-hint {
+  margin-top: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--g600);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.scroll-hint svg { animation: bounce 2s infinite; }
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+/* ---- Mode Header ---- */
+.mode-header { margin-bottom: 28px; }
+
+.mode-tag {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--black);
+  margin-bottom: 10px;
+}
+
+.mode-title {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.2;
+}
+
+.mode-title em { font-style: normal; color: var(--coral); }
+
+.mode-desc {
+  font-size: 17px;
+  color: var(--black);
+  margin-top: 8px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* ---- Side-by-Side Comparison ---- */
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.run-panel {
+  border-radius: 12px;
+  padding: 20px;
+  border: 2px solid var(--g200);
+  transition: border-color 0.3s;
+}
+
+.run-panel.broken { border-color: var(--coral); background: rgba(255,85,52,0.02); }
+.run-panel.healthy { border-color: var(--blue); background: rgba(50,126,255,0.02); }
+
+.run-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.run-label.broken-label { color: var(--coral); }
+.run-label.healthy-label { color: var(--blue); }
+
+.run-label .icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.run-label.broken-label .icon { background: var(--coral-bg); color: var(--coral); }
+.run-label.healthy-label .icon { background: var(--blue-bg); color: var(--blue); }
+
+/* ---- Context Window Messages ---- */
+.ctx-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--g300);
+  margin-bottom: 10px;
+}
+
+.ctx-msg {
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  border-left: none;
+  background: var(--g50);
+  transition: all 0.2s ease;
+}
+
+.ctx-msg:last-child { margin-bottom: 0; }
+
+.msg-role {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--g600);
+  margin-bottom: 2px;
+}
+
+.msg-text {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--black);
+  font-weight: 500;
+}
+
+.ctx-msg.ok { border-left: 3px solid var(--blue); }
+.ctx-msg.bad { border-left: 3px solid var(--coral); background: var(--coral-bg); }
+.ctx-msg.compound { border-left: 3px solid var(--coral); background: #FFF0ED; }
+
+.ctx-msg.diff {
+  background: var(--blue-bg);
+  animation: diffGlow 1.5s ease-out;
+}
+
+@keyframes diffGlow {
+  0% { box-shadow: 0 0 8px var(--blue-bg); }
+  100% { box-shadow: none; }
+}
+
+.err-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 700; color: var(--coral); letter-spacing: 0.3px;
+}
+
+.ok-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 700; color: var(--blue); letter-spacing: 0.3px;
+}
+
+/* ---- Agent Response ---- */
+.agent-response {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 2px solid var(--g200);
+}
+
+.agent-response.ok { border-color: var(--blue); }
+.agent-response.bad { border-color: var(--coral); background: #FFF8F6; }
+
+.agent-response .resp-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--g600); margin-bottom: 3px;
+}
+
+.agent-response .resp-text { font-size: 14px; line-height: 1.45; font-weight: 500; }
+
+/* ---- Fix Explanation ---- */
+.fix-section {
+  margin-top: 20px;
+  border: 1px solid var(--g200);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.fix-trigger {
+  padding: 12px 18px;
+  font-size: 13px; font-weight: 600; color: var(--black);
+  cursor: pointer; display: flex; align-items: center; gap: 8px;
+  background: none; border: none; width: 100%; font-family: inherit;
+  transition: background 0.2s;
+}
+
+.fix-trigger:hover { background: var(--g50); }
+
+.fix-trigger .arrow {
+  font-size: 12px; transition: transform 0.3s ease; display: inline-block;
+}
+
+.fix-section.open .fix-trigger .arrow { transform: rotate(90deg); }
+
+.fix-body {
+  max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+}
+
+.fix-section.open .fix-body { max-height: 500px; }
+
+.fix-diagram { padding: 16px 18px 20px; }
+
+.fix-text {
+  padding: 0 18px 16px;
+  font-size: 13px; line-height: 1.6; color: var(--black);
+}
+
+/* ---- SVG Pipeline Styles ---- */
+.pipeline-svg { width: 100%; max-width: 700px; display: block; margin: 0 auto; }
+.pipeline-svg text { font-family: 'Inter', sans-serif; }
+.pipeline-svg .box { rx: 8; stroke-width: 2; }
+.pipeline-svg .box-default { fill: var(--g50); stroke: var(--g200); }
+.pipeline-svg .box-broken { fill: var(--coral-bg); stroke: var(--coral); }
+
+.pipeline-svg .box-fix {
+  fill: var(--blue-bg); stroke: var(--blue);
+  opacity: 0; transition: opacity 0.5s ease;
+}
+.fix-section.open .box-fix { opacity: 1; transition-delay: 0.5s; }
+
+.pipeline-svg .arrow-line {
+  stroke: var(--g300); stroke-width: 2; fill: none; marker-end: url(#arrowhead);
+}
+
+.pipeline-svg .fix-arrow {
+  stroke: var(--blue); stroke-width: 2; stroke-dasharray: 4 3;
+  fill: none; marker-end: url(#arrowhead-blue);
+  opacity: 0; transition: opacity 0.5s ease;
+}
+.fix-section.open .fix-arrow { opacity: 1; transition-delay: 0.5s; }
+
+.pipeline-svg .label-default { fill: var(--g600); font-weight: 600; font-size: 12px; }
+.pipeline-svg .label-broken { fill: var(--coral); font-weight: 700; font-size: 11px; }
+.pipeline-svg .label-fix { fill: var(--blue); font-weight: 700; font-size: 11px; opacity: 0; transition: opacity 0.5s ease; }
+.fix-section.open .label-fix { opacity: 1; transition-delay: 0.5s; }
+
+/* ---- VS Divider ---- */
+.vs-divider {
+  display: none; text-align: center; padding: 8px 0;
+  font-size: 11px; font-weight: 800; letter-spacing: 2px; color: var(--g300);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .hero h1 { font-size: 30px; }
+  .mode-title { font-size: 28px; }
+  .section { padding: 48px 16px; }
+  .comparison { grid-template-columns: 1fr; gap: 0; }
+  .vs-divider { display: block; }
+}
+</style>
+</head>
+<body>
+
+<!-- Shared SVG defs -->
+<svg style="position:absolute;width:0;height:0">
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="var(--g300)"/>
+    </marker>
+    <marker id="arrowhead-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="var(--blue)"/>
+    </marker>
+  </defs>
+</svg>
+
+<!-- ====== INTRO ====== -->
+<div class="section" style="min-height:60vh">
+  <div class="inner hero">
+    <h1 class="reveal">Identify the <em>failure mode</em></h1>
+    <p class="sub reveal d1">Examine how one incorrect piece of data entering the agent's context causes errors to compound across subsequent turns. Then identify the failure mode.</p>
+    <div class="scroll-hint reveal d2">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M4 9l4 4 4-4"/></svg>
+      Scroll to explore the example
+    </div>
+  </div>
+</div>
+
+<!-- ====== SCENARIO ====== -->
+<div class="section" id="scenario">
+  <div class="inner">
+    <div class="mode-header">
+      <div class="mode-tag reveal">Scenario</div>
+      <h2 class="mode-title reveal d1">One <em>bad fact</em> enters early. Every later step trusts it.</h2>
+      <p class="mode-desc reveal d2">A customer service agent retrieves incorrect account data from a tool. Watch how the error propagates through the conversation.</p>
+    </div>
+
+    <div class="comparison reveal d3">
+      <!-- BROKEN RUN -->
+      <div class="run-panel broken">
+        <div class="run-label broken-label"><span class="icon">&times;</span> Broken Run</div>
+        <div class="ctx-label">Context Window</div>
+        <div class="ctx-msg"><div class="msg-role">System</div><div class="msg-text">You are a customer service agent for a SaaS platform.</div></div>
+        <div class="ctx-msg"><div class="msg-role">User</div><div class="msg-text">What plan am I on?</div></div>
+        <div class="ctx-msg bad"><div class="msg-role">Tool Result</div><div class="msg-text">User plan: Premium <span class="err-tag">&times; wrong — user is actually on Free tier</span></div></div>
+        <div class="agent-response bad">
+          <div class="resp-label">Agent (Turn 1)</div>
+          <div class="resp-text">You're on the <strong>Premium plan</strong>!</div>
+        </div>
+
+        <div style="margin-top:14px; border-top:1px dashed var(--coral-bg); padding-top:14px;">
+          <div class="ctx-label" style="color:var(--coral);">Turn 2 — Error Compounds</div>
+          <div class="ctx-msg"><div class="msg-role">User</div><div class="msg-text">Why was I charged $50?</div></div>
+          <div class="ctx-msg compound"><div class="msg-role">Agent</div><div class="msg-text">Premium costs $50/month. This charge is expected. <span class="err-tag">&#9888; cascaded from bad fact</span></div></div>
+        </div>
+
+        <div style="margin-top:14px; border-top:1px dashed var(--coral-bg); padding-top:14px;">
+          <div class="ctx-label" style="color:var(--coral);">Turn 3 — Error Deepens</div>
+          <div class="ctx-msg"><div class="msg-role">User</div><div class="msg-text">I want a refund.</div></div>
+          <div class="ctx-msg compound"><div class="msg-role">Agent</div><div class="msg-text">Premium plan charges are non-refundable per our policy. <span class="err-tag">&#9888; cascaded</span></div></div>
+        </div>
+      </div>
+
+      <div class="vs-divider">VS</div>
+
+      <!-- HEALTHY RUN -->
+      <div class="run-panel healthy">
+        <div class="run-label healthy-label"><span class="icon">&check;</span> Healthy Run</div>
+        <div class="ctx-label">Context Window</div>
+        <div class="ctx-msg"><div class="msg-role">System</div><div class="msg-text">You are a customer service agent for a SaaS platform.</div></div>
+        <div class="ctx-msg"><div class="msg-role">User</div><div class="msg-text">What plan am I on?</div></div>
+        <div class="ctx-msg ok diff"><div class="msg-role">Tool Result</div><div class="msg-text">User plan: Free tier <span class="ok-tag">&check; verified against billing DB</span></div></div>
+        <div class="agent-response ok">
+          <div class="resp-label">Agent (Turn 1)</div>
+          <div class="resp-text">You're on the <strong>Free tier</strong>. Would you like to learn about upgrade options?</div>
+        </div>
+
+        <div style="margin-top:14px; border-top:1px dashed var(--blue-bg); padding-top:14px;">
+          <div class="ctx-label" style="color:var(--blue);">Turn 2 — Consistent</div>
+          <div class="ctx-msg"><div class="msg-role">User</div><div class="msg-text">Why was I charged $50?</div></div>
+          <div class="ctx-msg ok"><div class="msg-role">Agent</div><div class="msg-text">Free tier users shouldn't be charged. Let me look into this billing discrepancy for you. <span class="ok-tag">&check; correct escalation</span></div></div>
+        </div>
+
+        <div style="margin-top:14px; border-top:1px dashed var(--blue-bg); padding-top:14px;">
+          <div class="ctx-label" style="color:var(--blue);">Turn 3 — Resolved</div>
+          <div class="ctx-msg"><div class="msg-role">User</div><div class="msg-text">I want a refund.</div></div>
+          <div class="ctx-msg ok"><div class="msg-role">Agent</div><div class="msg-text">Since you're on Free tier, this $50 charge is clearly an error. I've initiated a refund. <span class="ok-tag">&check; correct</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FIX EXPLANATION -->
+    <div class="fix-section reveal d4">
+      <button class="fix-trigger" onclick="toggleFix(this)">
+        <span class="arrow">&#9656;</span> Why does the fix work? &mdash; <em style="font-weight:400; color:var(--g600)">Verification gate</em>
+      </button>
+      <div class="fix-body">
+        <div class="fix-diagram">
+          <svg class="pipeline-svg" viewBox="0 0 700 210">
+            <!-- Source: Tool Result -->
+            <rect class="box box-default" x="10" y="30" width="140" height="150" rx="8"/>
+            <text class="label-default" x="80" y="22" text-anchor="middle" font-size="11">Tool Result</text>
+            <!-- 3 facts inside tool result -->
+            <rect x="22" y="44" width="116" height="32" rx="6" fill="var(--green-bg)" stroke="var(--green)" stroke-width="1.5"/>
+            <text x="80" y="64" text-anchor="middle" font-size="11" fill="var(--black)" font-weight="500">Billing DB: Free</text>
+            <rect x="22" y="84" width="116" height="32" rx="6" fill="var(--coral-bg)" stroke="var(--coral)" stroke-width="1.5"/>
+            <text x="80" y="104" text-anchor="middle" font-size="11" fill="var(--coral)" font-weight="600">Cache: Premium</text>
+            <rect x="22" y="124" width="116" height="32" rx="6" fill="var(--green-bg)" stroke="var(--green)" stroke-width="1.5"/>
+            <text x="80" y="144" text-anchor="middle" font-size="11" fill="var(--black)" font-weight="500">Account API: Free</text>
+
+            <!-- Arrows from source to context -->
+            <line class="arrow-line" x1="150" y1="60" x2="370" y2="60"/>
+            <line x1="150" y1="100" x2="370" y2="100" stroke="var(--coral)" stroke-width="2" stroke-dasharray="6 4" fill="none"/>
+            <line class="arrow-line" x1="150" y1="140" x2="370" y2="140"/>
+
+            <!-- Context Window -->
+            <rect class="box box-default" x="375" y="30" width="150" height="150" rx="8"/>
+            <text class="label-default" x="450" y="22" text-anchor="middle" font-size="11">Context Window</text>
+            <rect x="387" y="44" width="126" height="32" rx="6" fill="var(--green-bg)" stroke="var(--green)" stroke-width="1.5"/>
+            <text x="450" y="64" text-anchor="middle" font-size="11" fill="var(--black)" font-weight="500">Billing DB: Free</text>
+            <rect x="387" y="84" width="126" height="32" rx="6" fill="var(--coral-bg)" stroke="var(--coral)" stroke-width="2"/>
+            <text x="450" y="104" text-anchor="middle" font-size="11" fill="var(--coral)" font-weight="700">Cache: Premium</text>
+            <rect x="387" y="124" width="126" height="32" rx="6" fill="var(--green-bg)" stroke="var(--green)" stroke-width="1.5"/>
+            <text x="450" y="144" text-anchor="middle" font-size="11" fill="var(--black)" font-weight="500">Account API: Free</text>
+
+            <!-- Arrow to Output -->
+            <line class="arrow-line" x1="525" y1="105" x2="580" y2="105"/>
+            <rect class="box box-broken" x="585" y="80" width="105" height="50" rx="8"/>
+            <text class="label-broken" x="637" y="102" text-anchor="middle" font-size="11">Wrong Answer</text>
+            <text x="637" y="118" text-anchor="middle" font-size="9" fill="var(--coral)" opacity="0.8">trusts bad source</text>
+
+            <!-- FIX: Verification gate (fades in) -->
+            <rect class="box box-fix" x="215" y="72" width="100" height="56" rx="8"/>
+            <text class="label-fix" x="265" y="96" text-anchor="middle" font-size="11">Verify Gate</text>
+            <text class="label-fix" x="265" y="112" text-anchor="middle" font-size="9">cross-check</text>
+            <!-- X mark blocking the bad fact -->
+            <line class="fix-arrow" x1="255" y1="88" x2="275" y2="108" stroke="var(--blue)" stroke-width="3" stroke-linecap="round" style="marker-end:none"/>
+            <line class="fix-arrow" x1="275" y1="88" x2="255" y2="108" stroke="var(--blue)" stroke-width="3" stroke-linecap="round" style="marker-end:none"/>
+          </svg>
+        </div>
+        <p class="fix-text">The healthy run uses a <strong>verification gate</strong>: before trusting any single data source, the agent cross-checks it against other authoritative sources (billing database, account API). When a stale cache returns "Premium" but two other sources say "Free tier," the agent resolves the conflict <em>before</em> the bad fact enters the conversation. This prevents a single incorrect datum from compounding across every subsequent turn.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Scroll reveal */
+var observer = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+
+/* Fix toggle */
+function toggleFix(btn) {
+  var section = btn.parentElement;
+  section.classList.toggle('open');
+}
+</script>
+</body>
+</html>
